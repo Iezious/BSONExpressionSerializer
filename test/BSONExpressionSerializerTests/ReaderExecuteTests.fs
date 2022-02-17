@@ -31,6 +31,23 @@ module ReaderExecuteTests =
         test.Name.Should().Be(data.Name, "") |> ignore
         test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore
         
+    [<Test>]
+    let ``Test read flat class with voption``() =
+        let data = {| Name = "Tssa"; Date = DateTime.UtcNow; CountOpt = 12L  |}
+        let convert = ExpressionReader.CreateReader<TestFlatClassWithVOptionInt>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.CountOpt.Should().Be(ValueSome data.CountOpt, "") |> ignore  
+        test.Name.Should().Be(data.Name, "") |> ignore
+        
+    [<Test>]
+    let ``Test read flat class with voption none``() =
+        let data = {| Name = "Tssa"  |}
+        let convert = ExpressionReader.CreateReader<TestFlatClassWithVOptionInt>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.CountOpt.Should().Be(ValueNone, "") |> ignore  
+        test.Name.Should().Be(data.Name, "") |> ignore
             
     [<Test>]
     let ``Test read flat class with objectid``() =
@@ -69,4 +86,53 @@ module ReaderExecuteTests =
         
         test.Name.Should().Be(data.Name, "") |> ignore
         test.SubArray.Should().BeEquivalentTo(data.SubArray, "") |> ignore
+
+    [<Test>]
+    let ``Test read of TestClassWithSubObject``() =
+        let data = {| Name = "Tssa"; SubObject = {| Name ="dqwdqw"; Count = 22  |}  |}
+        let convert = ExpressionReader.CreateReader<TestClassWithSubObject>()
+        let test =  convert.Invoke(!-> data) 
         
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.SubObject.Should().NotBeNull("") |> ignore
+        test.SubObject.Name.Should().Be(data.SubObject.Name, "") |> ignore
+        test.SubObject.Count.Should().Be(data.SubObject.Count, "") |> ignore
+        
+    [<Test>]
+    let ``Test read of TestClassWithSubObject not set``() =
+        let data = {| Name = "Tssa" |}
+        let convert = ExpressionReader.CreateReader<TestClassWithSubObject>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.SubObject.Should().BeNull("") |> ignore
+    
+    [<Test>]
+    let ``Test read of TestClassWithSubObject set to null``() =
+        let data = {| Name = "Tssa"; SubObject = null |}
+        let convert = ExpressionReader.CreateReader<TestClassWithSubObject>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.SubObject.Should().BeNull("") |> ignore
+    
+    [<Test>]
+    let ``Test read of TestClassWithSubObject option full``() =
+        let data = {| Name = "Tssa"; SubObjectOption = {| Name ="dqwdqw"; Count = 22  |}  |}
+        let convert = ExpressionReader.CreateReader<TestClassWithSubObjectOption>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.SubObjectOption.IsSome.Should().Be(true, "") |> ignore
+        test.SubObjectOption.Value.Name.Should().Be(data.SubObjectOption.Name, "") |> ignore
+        test.SubObjectOption.Value.Count.Should().Be(data.SubObjectOption.Count, "") |> ignore
+
+                    
+    [<Test>]
+    let ``Test read of TestClassWithSubObject option none``() =
+        let data = {| Name = "Tssa" |}
+        let convert = ExpressionReader.CreateReader<TestClassWithSubObjectOption>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.SubObjectOption.Should().Be(None, "") |> ignore        

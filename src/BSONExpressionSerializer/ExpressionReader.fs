@@ -144,7 +144,12 @@ module ExpressionReader =
                          let param = Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsBsonDocument))
                          let subReader = buildReader(t, paramDef)
                          let lambda = Expression.Lambda(subReader, paramDef)
-                         Expression.Invoke(lambda, param)
+                         Expression.Condition(
+                                Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.IsBsonNull)),
+                                Expression.Constant(null, t),
+                                Expression.Invoke(lambda, param)
+                             )
+                         
             
             readValue pr.PropertyType propBson
             
