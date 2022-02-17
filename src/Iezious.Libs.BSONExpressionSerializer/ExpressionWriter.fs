@@ -44,7 +44,7 @@ module ExpressionWriter =
             let writeEnum(t: Type) (valueExpr: Expression) : Expression =
                 match pr.GetCustomAttribute<BsonRepresentationAttribute>() with
                 | null
-                     -> Expression.Convert(valueExpr, typeof<int32>)
+                     -> Expression.Convert(valueExpr, typeof<int32>) :> Expression
                 | attr when attr.Representation = BsonType.Int32
                      -> Expression.Convert(valueExpr, typeof<int32>)
                 | attr when attr.Representation = BsonType.Int64
@@ -54,6 +54,7 @@ module ExpressionWriter =
                         let toStringMethod = pr.PropertyType.GetMethod("ToString")
                         Expression.Call(valueExpr, toStringMethod)
                 | _ -> Expression.Convert(valueExpr, typeof<int32>)
+                |> fun e -> Expression.Convert(e, typeof<BsonValue>)
                 
             let rec writeOption(t: Type) (valueExpr: Expression) : Expression =
                 let argt = t.GenericTypeArguments[0]
@@ -147,12 +148,12 @@ module ExpressionWriter =
                 match ofType with
                 | t when t = typeof<string> -> Expression.Convert(valueExpr, typeof<BsonString>) 
                 | t when t = typeof<byte[]> -> Expression.New(typeof<BsonBinaryData>.GetConstructor([| typeof<byte[]> |]), valueExpr) 
-                | t when t = typeof<Int32> -> Expression.Convert(valueExpr, typeof<BsonInt32>) 
-                | t when t = typeof<Int64> -> Expression.Convert(valueExpr, typeof<BsonInt64>)
+                | t when t = typeof<Int32> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
+                | t when t = typeof<Int64> -> Expression.Convert(valueExpr, typeof<BsonValue>)
                 | t when t = typeof<Guid> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
                 | t when t = typeof<float> -> Expression.Convert(valueExpr, typeof<BsonValue>)
-                | t when t = typeof<Decimal> -> Expression.Convert(valueExpr, typeof<BsonDecimal128>) 
-                | t when t = typeof<Decimal128> -> Expression.Convert(valueExpr, typeof<BsonDecimal128>) 
+                | t when t = typeof<Decimal> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
+                | t when t = typeof<Decimal128> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
                 | t when t = typeof<Nullable<Int32>> -> writeNullable t valueExpr 
                 | t when t = typeof<Nullable<Int64>> -> writeNullable t valueExpr 
                 | t when t = typeof<Nullable<decimal>> -> writeNullable t valueExpr 
@@ -210,15 +211,18 @@ module ExpressionWriter =
         for pr in (objType.GetProperties() |> Seq.where(fun p -> p.GetCustomAttribute<BsonIgnoreAttribute>() = null)) do
             let name = getNameInBson pr |> Expression.Constant
             let value = Expression.Property(inst, pr)
+            let valExpr = buildValue pr value
             
             match getChecker pr with
             | Some writeCheck ->
                 Expression.IfThen(
                     writeCheck <| pr <| value,
-                    Expression.Call(_v_res, addMethod, name, buildValue pr value)    
-                ) :> Expression
+                    Expression.Call(_v_res, addMethod, name, valExpr)    
+                )
+                :> Expression
             | None ->
-                Expression.Empty() :> Expression
+                Expression.Call(_v_res, addMethod, name, valExpr)
+                :> Expression
             |> steps.Add
             
         steps.Add(_v_res)
