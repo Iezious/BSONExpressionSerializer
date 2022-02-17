@@ -21,6 +21,7 @@ module ReaderBuildTests =
     [<TestCase(typeof<TestFlatClassWithOptionValue>)>]
     [<TestCase(typeof<TestFlatClassWithVOptionString>)>]
     [<TestCase(typeof<TestFlatClassWithVOptionDate>)>]
+    [<TestCase(typeof<TestClassWithLongDictionary>)>]    
     [<TestCase(typeof<TestClassWithSubObjectOption>)>]
     [<TestCase(typeof<TestFlatClassWithVOptionLong>)>]
     [<TestCase(typeof<TestClassWithEnumInt>)>]

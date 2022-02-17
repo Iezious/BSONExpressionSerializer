@@ -93,8 +93,8 @@ module ExpressionWriter =
             and writeDictAsDocument(t: Type) (valueExpr: Expression) : Expression =
                 let tk = t.GenericTypeArguments[0]
                 let tv = t.GenericTypeArguments[1]
-                let tpair = typeof<KeyValuePair<_,_>>.MakeGenericType([|tk; tv|])
-                let tenum = typeof<IEnumerator<_>>.MakeGenericType([| tpair |])
+                let tpair = typeof<KeyValuePair<_,_>>.GetGenericTypeDefinition().MakeGenericType([|tk; tv|])
+                let tenum = typeof<IEnumerator<_>>.GetGenericTypeDefinition().MakeGenericType([| tpair |])
                 
                 let kv = Expression.Variable(tpair)
                 let k = Expression.Variable(tk)
@@ -104,14 +104,13 @@ module ExpressionWriter =
                 
                 let stepout = Expression.Label()
                 
-                let getValue = typeof<BsonDocument>.GetMethod("GetElement", [| typeof<int32> |])
-                let addMethod = t.GetMethod("Add")
-                let nextMethod = tenum.GetMethod("MoveNext")
-
+                let addMethod = typeof<BsonDocument>.GetMethod("Add",[| typeof<string>; typeof<BsonValue> |])
+                let nextMethod = typeof<System.Collections.IEnumerator>.GetMethod("MoveNext")
+                let getEnumeratorMethod = t.GetMethod("GetEnumerator")
                 
                 Expression.Block(
                     [enum; vDoc],
-                    Expression.Assign(enum, Expression.Call(valueExpr, "GetEnumerator", [||])),
+                    Expression.Assign(enum, Expression.Convert(Expression.Call(valueExpr, getEnumeratorMethod, [||]), tenum)),
                     Expression.Assign(vDoc, Expression.New(typeof<BsonDocument>)),
                     Expression.Loop(
                         Expression.Block(

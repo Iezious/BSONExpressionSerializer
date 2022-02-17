@@ -146,7 +146,7 @@ type TestClassWithIntDictionary = {
 [<CLIMutable>]
 type TestClassWithLongDictionary = {
     Name: string
-    Dict: Dictionary<string, int32> 
+    Dict: Dictionary<string, int64> 
 }
 
 [<CLIMutable>]
