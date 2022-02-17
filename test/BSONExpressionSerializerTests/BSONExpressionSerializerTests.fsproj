@@ -11,6 +11,7 @@
         <Compile Include="TestData.fs" />
         <Compile Include="ReaderBuildTests.fs" />
         <Compile Include="ReaderExecuteTests.fs" />
+        <Compile Include="WriterBuildTests.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
