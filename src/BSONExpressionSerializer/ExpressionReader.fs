@@ -79,22 +79,30 @@ module ExpressionReader =
                 let v = Expression.Variable(tv)
                 let elem = Expression.Variable(typeof<BsonElement>)
                 let i = Expression.Variable(typeof<int32>)
+                let vDoc = Expression.Variable(typeof<BsonDocument>)
                 
                 let stepout = Expression.Label()
                 
+                let getElementMethod = typeof<BsonDocument>.GetMethod("GetElement", [| typeof<int32> |])
+                let addMethod = t.GetMethod("Add")
+                
+                //(BsonDocument()).GetElement(0).Name.
+                //Dictionary<string, int>().a
+                
                 Expression.Block(
-                    [cnt; i],
-                    Expression.Assign(cnt, Expression.Property(bsonExpr,"ElementCount")),
+                    [arr; cnt; vDoc; i],
+                    Expression.Assign(vDoc, Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsBsonDocument))),
+                    Expression.Assign(cnt, Expression.Property(vDoc, nameof(Unchecked.defaultof<BsonDocument>.ElementCount))),
                     Expression.Assign(arr, Expression.New(t)),
                     Expression.Assign(i, Expression.Constant(0)),
                     Expression.Loop(
                         Expression.Block(
                              [elem; k; v],
                              Expression.IfThen(Expression.GreaterThanOrEqual(i, cnt), Expression.Break(stepout)),
-                             Expression.Assign(elem, Expression.Call(bsonExpr, "GetElement", [| typeof<Int32> |], i)),
-                             Expression.Assign(k, Expression.Property(Expression.Property(elem, "Key"), "AsString")),
+                             Expression.Assign(elem, Expression.Call(vDoc, getElementMethod, i)),
+                             Expression.Assign(k, Expression.Property(elem, "Name")),
                              Expression.Assign(v, readValue <| tv <| Expression.Property(elem, "Value")),
-                             Expression.Call(arr, "Add", [| tk; tv |], k, v),
+                             Expression.Call(arr, addMethod, k, v),
                              Expression.PostIncrementAssign(i)
                             ),
                         stepout

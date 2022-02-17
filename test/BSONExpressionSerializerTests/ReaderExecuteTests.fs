@@ -135,4 +135,82 @@ module ReaderExecuteTests =
         let test =  convert.Invoke(!-> data) 
         
         test.Name.Should().Be(data.Name, "") |> ignore
-        test.SubObjectOption.Should().Be(None, "") |> ignore        
+        test.SubObjectOption.Should().Be(None, "") |> ignore
+        
+    [<Test>]
+    let ``Test read of enum as int``() =
+        let data = {| Name = "Tssa"; EnumData = 2 |}
+        let convert = ExpressionReader.CreateReader<TestClassWithEnumInt>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        int(test.EnumData).Should().Be(data.EnumData, "") |> ignore
+        
+    [<Test>]
+    let ``Test read of enum as string``() =
+        let data = {| Name = "Tssa"; EnumData = "OptionB" |}
+        let convert = ExpressionReader.CreateReader<TestClassWithEnumString>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.EnumData.ToString().Should().Be(data.EnumData, "") |> ignore
+        
+                
+    [<Test>]
+    let ``Test read of array of objects``() =
+        let data = {| Name = "Tssa"
+                      SubArray = [|
+                          {| Name = "wdqwqdqdw"; Count = -1 |}
+                          {| Name = "qwdqdwq"; Count = 33 |}
+                      |]
+                   |}
+        let convert = ExpressionReader.CreateReader<TestFlatClassWithArrayOfObjects>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.SubArray.Length.Should().Be(data.SubArray.Length, "") |> ignore
+        test.SubArray[0].Name.Should().Be(data.SubArray[0].Name, "")  |> ignore
+        test.SubArray[0].Count.Should().Be(data.SubArray[0].Count, "")  |> ignore
+        test.SubArray[1].Name.Should().Be(data.SubArray[1].Name, "")  |> ignore
+        test.SubArray[1].Count.Should().Be(data.SubArray[1].Count, "")  |> ignore
+        
+    [<Test>]
+    let ``Test read of string dictionary``() =
+        let data = {| Name = "Tssa"
+                      Dict = {| KeyA = "wdqwqdqdw"; KeyB = "vaxacax"; KeyC = ";joioljoij" |}
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassWithStringDictionary>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.Dict["KeyA"].Should().Be(data.Dict.KeyA, "") |> ignore        
+        test.Dict["KeyB"].Should().Be(data.Dict.KeyB, "") |> ignore        
+        test.Dict["KeyC"].Should().Be(data.Dict.KeyC, "") |> ignore        
+                
+    [<Test>]
+    let ``Test read of int dictionary``() =
+        let data = {| Name = "Tssa"
+                      Dict = {| KeyA = 22; KeyB = 33; KeyC = 44 |}
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassWithIntDictionary>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.Dict["KeyA"].Should().Be(data.Dict.KeyA, "") |> ignore        
+        test.Dict["KeyB"].Should().Be(data.Dict.KeyB, "") |> ignore        
+        test.Dict["KeyC"].Should().Be(data.Dict.KeyC, "") |> ignore        
+                        
+    
+    [<Test>]
+    let ``Test read of object dictionary``() =
+        let data = {| Name = "Tssa"
+                      Dict = {| KeyA = {| Name = "wdq" |}; KeyB = {| Count = 12313 |} |}
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassWithSubClassDictionary>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.Dict.Count.Should().Be(2, "") |> ignore
+        test.Dict["KeyA"].Name.Should().Be(data.Dict.KeyA.Name, "") |> ignore        
+        test.Dict["KeyB"].Count.Should().Be(data.Dict.KeyB.Count, "") |> ignore        
+        

@@ -1,5 +1,6 @@
 namespace BSONExpressionSerializerTests
 
+open System.Collections.Generic
 open MongoDB.Bson
 open MongoDB.Bson.Serialization.Attributes
 
@@ -115,5 +116,33 @@ type TestClassWithEnumString = {
     Count: int64
     [<BsonRepresentation(BsonType.String)>]
     EnumData: TestEnum
+}
+    
+    
+
+[<CLIMutable>]
+type TestClassWithStringDictionary = {
+    Name: string
+    Dict: Dictionary<string, string> 
+}
+        
+
+[<CLIMutable>]
+type TestClassWithIntDictionary = {
+    Name: string
+    Dict: Dictionary<string, int32> 
+}
+            
+
+[<CLIMutable>]
+type TestClassWithLongDictionary = {
+    Name: string
+    Dict: Dictionary<string, int32> 
+}
+
+[<CLIMutable>]
+type TestClassWithSubClassDictionary = {
+    Name: string
+    Dict: Dictionary<string, TestFlatClass> 
 }
     
