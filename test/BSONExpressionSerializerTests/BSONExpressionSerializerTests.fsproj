@@ -24,7 +24,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\src\BSONExpressionSerializer\BSONExpressionSerializer.fsproj" />
+      <ProjectReference Include="..\..\src\Iezious.Libs.BSONExpressionSerializer\Iezious.Libs.BSONExpressionSerializer.fsproj" />
     </ItemGroup>
 
 </Project>
