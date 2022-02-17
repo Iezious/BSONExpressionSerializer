@@ -17,6 +17,8 @@
       <Compile Include="Utils.fs" />
       <Compile Include="ExpressionReaderRegistry.fs" />
       <Compile Include="ExpressionReader.fs" />
+      <Compile Include="ExpressionWriter.fs" />
+      <Compile Include="ExpressionStreamReader.fs" />
     </ItemGroup>
 
 </Project>

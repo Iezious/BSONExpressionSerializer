@@ -125,6 +125,7 @@ module ExpressionReader =
                 match ofType with
                 | t when t = typeof<string> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsString)) 
                 | t when t = typeof<byte[]> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsByteArray)) 
+                | t when t = typeof<bool> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsBoolean)) 
                 | t when t = typeof<Int32> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt32)) 
                 | t when t = typeof<Int64> ->
                            Expression.Condition(
