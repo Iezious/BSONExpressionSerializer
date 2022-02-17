@@ -1,3 +1,4 @@
+namespace BSONExpressionSerializerTests
 module Program =
 
     [<EntryPoint>]
