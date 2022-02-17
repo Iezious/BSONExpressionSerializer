@@ -30,42 +30,37 @@ module ExpressionReader =
                        -> Expression.Convert(Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt64)), t)
                 | attr when attr.Representation = BsonType.String
                        ->   let getter = Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsString))
-                            Expression.Call(t.GetMethod("Parse", BindingFlags.Static, [| typeof<Type>; typeof<string> |]), getter)
+                            let parseMethod = typeof<Enum>.GetMethod("Parse", 1, [| typeof<string> |]).MakeGenericMethod(t)
+                            Expression.Call(parseMethod, getter)
                 | _ -> Expression.Convert(Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt32)), t)
 
+            
             let rec readOption(t: Type) (bsonExpr: Expression) : Expression =
                 let argt = t.GenericTypeArguments[0]
-                Expression.IfThenElse( 
+                Expression.Condition( 
                         Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.IsBsonNull)),
                         Expression.Property(null, t, "None"),
-                        Expression.Call(t.GetMethod("Some", BindingFlags.Static), readValue argt bsonExpr)        
-                    )
-
-            and readVOption(t: Type) (bsonExpr: Expression) : Expression =
-                let argt = t.GenericTypeArguments[0]
-                Expression.IfThenElse( 
-                        Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.IsBsonNull)),
-                        Expression.Property(null, t, "None"),
-                        Expression.Call(t.GetMethod("Some", BindingFlags.Static), readValue argt bsonExpr)        
+                        Expression.Call(t.GetMethod("Some", BindingFlags.Static + BindingFlags.Public), readValue argt bsonExpr)        
                     )
 
             and readArray(t: Type) (bsonExpr: Expression) : Expression =
                 let cnt = Expression.Variable(typeof<int32>)
                 let arr = Expression.Variable(t)
                 let i = Expression.Variable(typeof<int32>)
-                let asArray = Expression.Property(bsonExpr, "AsBsonArray")
-                let getelem = Expression.Property(asArray, typeof<BsonArray>.GetProperty("Item"), i)
+                let srcArray = Expression.Variable(typeof<BsonArray>)
+                let getelem = Expression.Property(srcArray, typeof<BsonArray>.GetProperty("Item", [| typeof<int32> |]), i)
                 let stepout = Expression.Label()
                           
                 Expression.Block(
-                    [cnt; i], 
-                    Expression.Assign(cnt, Expression.Property(asArray,"Count")),
-                    Expression.Assign(arr, Expression.New(t)),
+                    [cnt; i; srcArray],
+                    Expression.Assign(srcArray, Expression.Property(bsonExpr, "AsBsonArray")),
+                    Expression.Assign(cnt, Expression.Property(srcArray,"Count")),
+                    Expression.Assign(arr, Expression.NewArrayBounds(t.GetElementType(), cnt)),
                     Expression.Assign(i, Expression.Constant(0)),
                     Expression.Loop(
                         Expression.Block(
                              Expression.IfThen(Expression.GreaterThanOrEqual(i, cnt), Expression.Break(stepout)),
-                             Expression.Assign(Expression.ArrayIndex(arr, i), readValue <| t.GetElementType() <| getelem),
+                             Expression.Assign(Expression.ArrayAccess(arr, i), readValue <| t.GetElementType() <| getelem),
                              Expression.Increment(i)
                             )
                     ),
@@ -129,43 +124,61 @@ module ExpressionReader =
                 | t when t = typeof<Nullable<Int64>> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableInt64)) 
                 | t when t = typeof<Nullable<decimal>> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableDecimal)) 
                 | t when t = typeof<Nullable<Guid>> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableGuid)) 
-                | t when t = typeof<DateTime> -> Expression.Call(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.ToUniversalTime), [||]) 
-                | t when t = typeof<string voption>
-                      -> Expression.Call(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.ToUniversalTime), [||])
+                | t when t = typeof<DateTime> -> Expression.Call(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.ToUniversalTime), [||])
+                | t when t = typeof<BsonObjectId> -> Expression.Convert(Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsObjectId)), typeof<BsonObjectId>) 
+                | t when t = typeof<ObjectId> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsObjectId))
                 | t when t.IsEnum
                       -> readEnum(t) bsonExpr
-                | t when t.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition()
+                | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition()
                       -> readOption(t) bsonExpr
-                | t when t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
+                | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
                       -> readOption(t) bsonExpr
                 | t when t.IsArray
                       -> readArray(t) bsonExpr
-                | t when t.GetGenericTypeDefinition() = typeof<Dictionary<_,_>>.GetGenericTypeDefinition()
+                | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Dictionary<_,_>>.GetGenericTypeDefinition()
                       -> readDict(t) bsonExpr
-                | t   -> Expression.Invoke(buildReader(t), Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsBsonDocument)))
+                | t   ->
+                         let subReader = buildReader(t)
+//                         let lambdaType = Type.MakeGenericSignatureType(typeof<Func<_,_>>, typeof<BsonDocument>, t)
+                         let paramDef = Expression.Parameter(typeof<BsonDocument>)
+                         let param = Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsBsonDocument))
+                         let lambda = Expression.Lambda(subReader, paramDef)
+                         Expression.Invoke(lambda, param)
             
             readValue pr.PropertyType propBson
+            
+        let defaultAssignment (inst: Expression, pr: PropertyInfo) =
+            match pr.GetCustomAttribute<BsonDefaultValueAttribute>(), pr.PropertyType with
+            | attr, t when attr <> null
+                -> Expression.Assign(Expression.Property(inst, pr), Expression.Convert(Expression.Constant(attr.DefaultValue), t))
+            | _, t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition()
+                -> Expression.Assign(Expression.Property(inst, pr), Expression.Property(null, t, "None"))
+            | _, t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
+                -> Expression.Assign(Expression.Property(inst, pr), Expression.Property(null, t, "None"))
+            | _, t -> Expression.Assign(Expression.Property(inst, pr), Expression.Default(t))
+            
 
-        let _v_doc = Expression.Parameter(typeof<BsonDocument>)
+        let _v_doc = Expression.Parameter(typeof<BsonDocument>, "doc")
         let _v_res = Expression.Variable(objType, "result")
         let steps = List<Expression>()
         steps.Add(Expression.Assign(_v_res, Expression.New(objType)))
         
         for pr in (objType.GetProperties() |> Seq.where(fun p -> p.GetCustomAttribute<BsonIgnoreAttribute>() = null)) do
             let name = getNameInBson pr |> Expression.Constant
+            let propReader = propConverter <| pr <| Expression.Property(_v_doc, "Item", name)
             Expression.IfThenElse(
                     Expression.Call(_v_doc, typeof<BsonDocument>.GetMethod("Contains"), name),
-                    Expression.Assign(Expression.Property(_v_res, pr), Expression.Invoke(propConverter <| pr <| Expression.Property(_v_doc, "Item", name))),
-                    Expression.Default(pr.PropertyType)
+                    Expression.Assign(Expression.Property(_v_res, pr), propReader),
+                    defaultAssignment(_v_res, pr)
                 )
             |> steps.Add
         
         steps.Add(_v_res)
         
-        Expression.Block([_v_res], steps)
+        Expression.Block([_v_res; _v_doc], steps)
     
     let CreateReader<'t>() =
         let expr = buildReader(typeof<'t>)
-        let l = Expression.Lambda<Func<BsonDocument, 't>>(expr)
+        let l = Expression.Lambda<Func<BsonDocument, 't>>(expr, Expression.Parameter(typeof<BsonDocument>, "doc"))
         l.Compile()
         
