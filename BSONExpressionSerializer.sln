@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BSONExpressionSerializer", "src\BSONExpressionSerializer\BSONExpressionSerializer.fsproj", "{52E8C3AF-0E40-49E4-BF65-7F051EE73A17}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BSONExpressionSerializerTests", "test\BSONExpressionSerializerTests\BSONExpressionSerializerTests.fsproj", "{18FFC2AE-BCD9-4081-8D80-838DA3AA5740}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{52E8C3AF-0E40-49E4-BF65-7F051EE73A17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{52E8C3AF-0E40-49E4-BF65-7F051EE73A17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{52E8C3AF-0E40-49E4-BF65-7F051EE73A17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{52E8C3AF-0E40-49E4-BF65-7F051EE73A17}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18FFC2AE-BCD9-4081-8D80-838DA3AA5740}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18FFC2AE-BCD9-4081-8D80-838DA3AA5740}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18FFC2AE-BCD9-4081-8D80-838DA3AA5740}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18FFC2AE-BCD9-4081-8D80-838DA3AA5740}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
