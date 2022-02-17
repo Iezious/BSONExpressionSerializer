@@ -3,7 +3,6 @@ namespace BSONExpressionSerializerTests
 open System
 open Iezious.Libs.BSONExpressionSerializer
 open NUnit.Framework
-open Newtonsoft.Json.Bson
 open Utils
 open MongoDB.Bson
 open FluentAssertions
@@ -20,6 +19,30 @@ module ReaderExecuteTests =
         test.Count.Should().Be(data.Count, "") |> ignore  
         test.Name.Should().Be(data.Name, "") |> ignore
         test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore
+        
+    [<Test>]
+    let ``Test read read types``() =
+        let data = {| Name = "Tssa"; Date = DateTime.UtcNow; Count = 33; CountLong=142L; Value=222.23  |}
+        let convert = ExpressionReader.CreateReader<TestFlatDoublesClass>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Count.Should().Be(data.Count, "") |> ignore  
+        test.CountLong.Should().Be(data.CountLong, "") |> ignore  
+        test.Value.Should().BeApproximately(data.Value, 0.0001, "") |> ignore  
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore        
+    
+    [<Test>]
+    let ``Test read read types with conversion``() =
+        let data = {| Name = "Tssa"; Date = DateTime.UtcNow; Count = 33; CountLong=142; Value=222  |}
+        let convert = ExpressionReader.CreateReader<TestFlatDoublesClass>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Count.Should().Be(data.Count, "") |> ignore  
+        test.CountLong.Should().Be(data.CountLong, "") |> ignore  
+        test.Value.Should().BeApproximately(data.Value, 0.0001, "") |> ignore  
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore
     
     [<Test>]
     let ``Test read flat class with defaults``() =
@@ -34,7 +57,16 @@ module ReaderExecuteTests =
     [<Test>]
     let ``Test read flat class with voption``() =
         let data = {| Name = "Tssa"; Date = DateTime.UtcNow; CountOpt = 12L  |}
-        let convert = ExpressionReader.CreateReader<TestFlatClassWithVOptionInt>()
+        let convert = ExpressionReader.CreateReader<TestFlatClassWithVOptionLong>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.CountOpt.Should().Be(ValueSome data.CountOpt, "") |> ignore  
+        test.Name.Should().Be(data.Name, "") |> ignore
+        
+    [<Test>]
+    let ``Test read flat class with voption and int64 conversion``() =
+        let data = {| Name = "Tssa"; Date = DateTime.UtcNow; CountOpt = 12  |}
+        let convert = ExpressionReader.CreateReader<TestFlatClassWithVOptionLong>()
         let test =  convert.Invoke(!-> data) 
         
         test.CountOpt.Should().Be(ValueSome data.CountOpt, "") |> ignore  
@@ -43,7 +75,7 @@ module ReaderExecuteTests =
     [<Test>]
     let ``Test read flat class with voption none``() =
         let data = {| Name = "Tssa"  |}
-        let convert = ExpressionReader.CreateReader<TestFlatClassWithVOptionInt>()
+        let convert = ExpressionReader.CreateReader<TestFlatClassWithVOptionLong>()
         let test =  convert.Invoke(!-> data) 
         
         test.CountOpt.Should().Be(ValueNone, "") |> ignore  

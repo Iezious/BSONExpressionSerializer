@@ -12,6 +12,15 @@ type TestFlatClass = {
 }
 
 [<CLIMutable>]
+type TestFlatDoublesClass = {
+    Name: string
+    Count: int32
+    CountLong: int64
+    Value: float
+    Date: System.DateTime
+}
+
+[<CLIMutable>]
 type TestFlatClassWithObjectID = {
     _id: ObjectId
     Name: string
@@ -65,7 +74,7 @@ type TestFlatClassWithVOptionDate = {
     OptDate: System.DateTime voption
 }
 [<CLIMutable>]
-type TestFlatClassWithVOptionInt = {
+type TestFlatClassWithVOptionLong = {
     _id: BsonObjectId
     Name: string
     CountOpt: int64 voption

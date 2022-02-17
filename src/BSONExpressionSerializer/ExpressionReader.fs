@@ -126,14 +126,26 @@ module ExpressionReader =
                 | t when t = typeof<string> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsString)) 
                 | t when t = typeof<byte[]> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsByteArray)) 
                 | t when t = typeof<Int32> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt32)) 
-                | t when t = typeof<Int64> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt64)) 
+                | t when t = typeof<Int64> ->
+                           Expression.Condition(
+                                Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.IsInt32)),
+                                Expression.Convert(Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt32)), typeof<int64>),
+                                Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt64))
+                           )
                 | t when t = typeof<Guid> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsGuid)) 
+                | t when t = typeof<float> ->
+                           Expression.Condition(
+                                Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.IsInt32)),
+                                Expression.Convert(Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt32)), typeof<float>),
+                                Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsDouble))
+                           )
                 | t when t = typeof<Decimal> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsDecimal)) 
                 | t when t = typeof<Decimal128> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsDecimal128)) 
                 | t when t = typeof<Nullable<Int32>> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableInt32)) 
-                | t when t = typeof<Nullable<Int64>> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableInt64)) 
+                | t when t = typeof<Nullable<Int64>> ->Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableInt64)) 
                 | t when t = typeof<Nullable<decimal>> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableDecimal)) 
                 | t when t = typeof<Nullable<Guid>> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableGuid)) 
+                | t when t = typeof<Nullable<float>> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableDouble)) 
                 | t when t = typeof<DateTime> -> Expression.Call(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.ToUniversalTime), [||])
                 | t when t = typeof<BsonObjectId> -> Expression.Convert(Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsObjectId)), typeof<BsonObjectId>) 
                 | t when t = typeof<ObjectId> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsObjectId))
