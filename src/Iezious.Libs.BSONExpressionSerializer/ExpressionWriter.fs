@@ -76,7 +76,7 @@ module ExpressionWriter =
                 Expression.Block(
                     [cnt; i; arr; srcArray],
                     Expression.Assign(srcArray, valueExpr),
-                    Expression.Assign(cnt, Expression.Property(srcArray,"Count")),
+                    Expression.Assign(cnt, Expression.Property(srcArray,"Length")),
                     Expression.Assign(arr, Expression.New(typeof<BsonArray>.GetConstructor([|typeof<int>|]), cnt)),
                     Expression.Assign(i, Expression.Constant(0)),
                     Expression.Loop(
