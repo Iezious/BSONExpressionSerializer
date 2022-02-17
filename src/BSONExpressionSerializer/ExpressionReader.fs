@@ -17,7 +17,7 @@ module ExpressionReader =
         | attr when String.IsNullOrWhiteSpace(attr.ElementName) -> m.Name
         | attr -> attr.ElementName
         
-    let rec buildReader(objType: Type) : Expression =
+    let rec buildReader(objType: Type, doc: ParameterExpression) : Expression =
 
         let propConverter (pr: PropertyInfo) (propBson: Expression) : Expression =
             
@@ -52,7 +52,7 @@ module ExpressionReader =
                 let stepout = Expression.Label()
                           
                 Expression.Block(
-                    [cnt; i; srcArray],
+                    [cnt; i; arr; srcArray],
                     Expression.Assign(srcArray, Expression.Property(bsonExpr, "AsBsonArray")),
                     Expression.Assign(cnt, Expression.Property(srcArray,"Count")),
                     Expression.Assign(arr, Expression.NewArrayBounds(t.GetElementType(), cnt)),
@@ -61,8 +61,9 @@ module ExpressionReader =
                         Expression.Block(
                              Expression.IfThen(Expression.GreaterThanOrEqual(i, cnt), Expression.Break(stepout)),
                              Expression.Assign(Expression.ArrayAccess(arr, i), readValue <| t.GetElementType() <| getelem),
-                             Expression.Increment(i)
-                            )
+                             Expression.PostIncrementAssign(i)
+                            ),
+                        stepout
                     ),
                     arr
                 )
@@ -94,8 +95,9 @@ module ExpressionReader =
                              Expression.Assign(k, Expression.Property(Expression.Property(elem, "Key"), "AsString")),
                              Expression.Assign(v, readValue <| tv <| Expression.Property(elem, "Value")),
                              Expression.Call(arr, "Add", [| tk; tv |], k, v),
-                             Expression.Increment(i)
-                            )
+                             Expression.PostIncrementAssign(i)
+                            ),
+                        stepout
                     ),
                     arr
                 )                
@@ -138,10 +140,9 @@ module ExpressionReader =
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Dictionary<_,_>>.GetGenericTypeDefinition()
                       -> readDict(t) bsonExpr
                 | t   ->
-                         let subReader = buildReader(t)
-//                         let lambdaType = Type.MakeGenericSignatureType(typeof<Func<_,_>>, typeof<BsonDocument>, t)
                          let paramDef = Expression.Parameter(typeof<BsonDocument>)
                          let param = Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsBsonDocument))
+                         let subReader = buildReader(t, paramDef)
                          let lambda = Expression.Lambda(subReader, paramDef)
                          Expression.Invoke(lambda, param)
             
@@ -158,7 +159,7 @@ module ExpressionReader =
             | _, t -> Expression.Assign(Expression.Property(inst, pr), Expression.Default(t))
             
 
-        let _v_doc = Expression.Parameter(typeof<BsonDocument>, "doc")
+        let _v_doc = doc
         let _v_res = Expression.Variable(objType, "result")
         let steps = List<Expression>()
         steps.Add(Expression.Assign(_v_res, Expression.New(objType)))
@@ -175,10 +176,11 @@ module ExpressionReader =
         
         steps.Add(_v_res)
         
-        Expression.Block([_v_res; _v_doc], steps)
+        Expression.Block([_v_res], steps)
     
     let CreateReader<'t>() =
-        let expr = buildReader(typeof<'t>)
-        let l = Expression.Lambda<Func<BsonDocument, 't>>(expr, Expression.Parameter(typeof<BsonDocument>, "doc"))
+        let doc = Expression.Parameter(typeof<BsonDocument>)
+        let expr = buildReader(typeof<'t>, doc)
+        let l = Expression.Lambda<Func<BsonDocument, 't>>(expr, doc)
         l.Compile()
         

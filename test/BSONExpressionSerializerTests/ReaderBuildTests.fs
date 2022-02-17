@@ -27,7 +27,8 @@ module ReaderBuildTests =
     [<TestCase(typeof<TestClassWithEnumString>)>]
     
     let ``Test that we don't fail on lambda build``(t: Type) =
-        let expr = ExpressionReader.buildReader(t)
+        let param = Expression.Parameter(typeof<BsonDocument>)
+        let expr = ExpressionReader.buildReader(t, param)
 //        let f = Expression.Lambda(expr, Expression.Parameter(typeof<BsonDocument>)).Compile()
         ()    
 
@@ -38,3 +39,7 @@ module ReaderBuildTests =
     [<Test>]
     let ``Test that lambda compile works for subobjects``() =
         ExpressionReader.CreateReader<TestClassWithSubObject>() |> ignore
+        
+    [<Test>]
+    let ``Test that lambda compile works for arrays``() =
+        ExpressionReader.CreateReader<TestFlatClassWithArrayOfIntValues>() |> ignore        
