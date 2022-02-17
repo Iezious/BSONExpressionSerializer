@@ -51,7 +51,7 @@ module ExpressionWriter =
                      -> Expression.Convert(Expression.Convert(valueExpr, typeof<int32>), typeof<int64>)
                 | attr when attr.Representation = BsonType.String
                      -> 
-                        let toStringMethod = pr.PropertyType.GetMethod("ToString")
+                        let toStringMethod = pr.PropertyType.GetMethod("ToString", [||])
                         Expression.Call(valueExpr, toStringMethod)
                 | _ -> Expression.Convert(valueExpr, typeof<int32>)
                 |> fun e -> Expression.Convert(e, typeof<BsonValue>)
