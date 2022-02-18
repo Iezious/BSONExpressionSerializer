@@ -195,4 +195,11 @@ type TestClassWithBsonDocument = {
     Name: string
     Payload: BsonDocument 
 }
+        
+[<CLIMutable>]
+type TestClassWithBsonDocumentWithDefault = {
+    Name: string
+    [<BsonIgnoreIfNull>]
+    Payload: BsonDocument 
+}
     

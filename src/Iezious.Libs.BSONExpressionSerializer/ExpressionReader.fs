@@ -34,7 +34,15 @@ module ExpressionReader =
                             Expression.Call(parseMethod, getter)
                 | _ -> Expression.Convert(Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt32)), t)
 
-            
+            let readBsonDocument(t: Type) (bsonExpr: Expression) : Expression =
+                let m = t.GetMethod(nameof(Unchecked.defaultof<BsonDocument>.DeepClone), [||])
+                let docExpr = Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsBsonDocument))
+                Expression.Condition(
+                        Expression.NotEqual(bsonExpr, Expression.Constant(BsonNull.Value, typeof<BsonValue>)),
+                        Expression.Property(Expression.Call(docExpr, m), nameof(Unchecked.defaultof<BsonValue>.AsBsonDocument)),
+                        Expression.Constant(null, t)
+                    )
+                        
             let rec readOption(t: Type) (bsonExpr: Expression) : Expression =
                 let argt = t.GenericTypeArguments[0]
                 Expression.Condition( 
@@ -42,7 +50,7 @@ module ExpressionReader =
                         Expression.Property(null, t, "None"),
                         Expression.Call(t.GetMethod("Some", BindingFlags.Static + BindingFlags.Public), readValue argt bsonExpr)        
                     )
-
+                
             and nullSafe builder (t: Type) (bsonExpr: Expression) : Expression =
                 Expression.Condition(
                         Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.IsBsonNull)),
@@ -160,6 +168,8 @@ module ExpressionReader =
                 | t when t = typeof<DateTime> -> Expression.Call(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.ToUniversalTime), [||])
                 | t when t = typeof<BsonObjectId> -> Expression.Convert(Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsObjectId)), typeof<BsonObjectId>) 
                 | t when t = typeof<ObjectId> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsObjectId))
+                | t when t = typeof<BsonDocument>
+                     -> readBsonDocument t bsonExpr
                 | t when t.IsEnum
                       -> readEnum(t) bsonExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Nullable<_>>.GetGenericTypeDefinition()

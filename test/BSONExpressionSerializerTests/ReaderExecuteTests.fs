@@ -313,13 +313,37 @@ module ReaderExecuteTests =
     [<Test>]
     let ``Test read of object with bson document``() =
         let data = {| 
-                      Name = 11
+                      Name = "wqdqwqwdqdw"
                       Payload = !-> {| SomeKey = 11; OtherKey = "ddqwqd" |}
                    |}
         let convert = ExpressionReader.CreateReader<TestClassWithBsonDocument>()
         let test =  convert.Invoke(!-> data) 
         
-        test.Name.Should().Be("zz", "") |> ignore
+        test.Name.Should().Be(data.Name, "") |> ignore
         test.Payload["SomeKey"].AsInt32.Should().Be(11, "") |> ignore
         test.Payload["OtherKey"].AsString.Should().Be("ddqwqd", "") |> ignore
+                    
+    [<Test>]
+    let ``Test read of object with null bson document``() =
+        let data = {| 
+                      Name = "wqdqwqwdqdw"
+                      Payload = null
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassWithBsonDocument>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        (test.Payload :> obj).Should().BeNull("") |> ignore
+                            
+    [<Test>]
+    let ``Test read of object with null bson document and default value``() =
+        let data = {| 
+                      Name = "wqdqwqwdqdw"
+                      Payload = null
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassWithBsonDocumentWithDefault>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        (test.Payload :> obj).Should().BeNull("") |> ignore
         
