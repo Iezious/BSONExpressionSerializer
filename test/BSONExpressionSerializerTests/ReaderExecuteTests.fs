@@ -21,8 +21,8 @@ module ReaderExecuteTests =
         test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore
         
     [<Test>]
-    let ``Test read read types``() =
-        let data = {| Name = "Tssa"; Date = DateTime.UtcNow; Count = 33; CountLong=142L; Value=222.23  |}
+    let ``Test read types``() =
+        let data = {| Name = "Tssa"; Date = DateTime.UtcNow; Is=true; Count = 33; CountLong=142L; Value=222.23  |}
         let convert = ExpressionReader.CreateReader<TestFlatDoublesClass>()
         let test =  convert.Invoke(!-> data) 
         
@@ -30,10 +30,11 @@ module ReaderExecuteTests =
         test.CountLong.Should().Be(data.CountLong, "") |> ignore  
         test.Value.Should().BeApproximately(data.Value, 0.0001, "") |> ignore  
         test.Name.Should().Be(data.Name, "") |> ignore
+        test.Is.Should().Be(data.Is, "") |> ignore
         test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore        
     
     [<Test>]
-    let ``Test read read types with conversion``() =
+    let ``Test read types with conversion``() =
         let data = {| Name = "Tssa"; Date = DateTime.UtcNow; Count = 33; CountLong=142; Value=222  |}
         let convert = ExpressionReader.CreateReader<TestFlatDoublesClass>()
         let test =  convert.Invoke(!-> data) 

@@ -18,7 +18,18 @@ type TestFlatDoublesClass = {
     Count: int32
     CountLong: int64
     Value: float
+    Is : bool
     Date: System.DateTime
+}
+
+[<CLIMutable>]
+type TestFlatWithDefaultValuesClass = {
+    [<BsonIgnoreIfDefault>]
+    Name: string
+    [<BsonIgnoreIfDefault; BsonDefaultValue(0)>]
+    Count: int32
+    [<BsonIgnoreIfDefault; BsonDefaultValue(false)>]
+    Is : bool
 }
 
 [<CLIMutable>]
@@ -37,7 +48,6 @@ type TestFlatClassWithBsonId = {
 
 [<CLIMutable>]
 type TestFlatClassWithArrayOfStringValues = {
-    _id: BsonObjectId
     Name: string
     Count: int32
     SubArray: string[]
@@ -45,7 +55,6 @@ type TestFlatClassWithArrayOfStringValues = {
 
 [<CLIMutable>]
 type TestFlatClassWithArrayOfIntValues = {
-    _id: BsonObjectId
     Name: string
     Count: int64
     SubArray: int32[]
@@ -53,7 +62,7 @@ type TestFlatClassWithArrayOfIntValues = {
 
 [<CLIMutable>]
 type TestFlatClassWithOptionValue = {
-    _id: BsonObjectId
+    _id: ObjectId
     Name: string
     Count: int64
     OptString: string option
@@ -61,7 +70,6 @@ type TestFlatClassWithOptionValue = {
 
 [<CLIMutable>]
 type TestFlatClassWithVOptionString = {
-    _id: BsonObjectId
     Name: string
     Count: int64
     OptString: string voption
@@ -69,17 +77,15 @@ type TestFlatClassWithVOptionString = {
 
 [<CLIMutable>]
 type TestFlatClassWithVOptionDate = {
-    _id: BsonObjectId
     Name: string
     Count: int64
     OptDate: System.DateTime voption
 }
+
 [<CLIMutable>]
 type TestFlatClassWithVOptionLong = {
-    _id: BsonObjectId
     Name: string
     CountOpt: int64 voption
-    Date: System.DateTime 
 }
 
 [<CLIMutable>]

@@ -20,7 +20,7 @@ module ExpressionWriter =
     let private getDefaultValue(pr: PropertyInfo) : Expression =
         match pr.GetCustomAttribute<BsonDefaultValueAttribute>(), pr.PropertyType with
         | attr, t when attr <> null
-             -> Expression.Convert(Expression.Constant(attr.TypeId), t)
+             -> Expression.Convert(Expression.Constant(attr.DefaultValue), t)
         | _, t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition()
             -> Expression.Property(null, t, "None")
         | _, t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
@@ -154,13 +154,22 @@ module ExpressionWriter =
                         Expression.Constant(BsonNull.Value, typeof<BsonValue>)
                     )
                 
+            and writeWithNullCheck (valueExpr: Expression) (writeExpr:Expression) =
+                Expression.Condition(
+                        Expression.Equal(valueExpr, Expression.Constant(null)),
+                        Expression.Constant(BsonNull.Value) |> bval,
+                        writeExpr |> bval
+                    ) :> Expression
+                
             and writeValue(ofType: Type) (valueExpr: Expression) : Expression =
+                let nullSafe = writeWithNullCheck valueExpr
                 match ofType with
-                | t when t = typeof<string> -> Expression.Convert(valueExpr, typeof<BsonString>) 
+                | t when t = typeof<string> -> Expression.Convert(valueExpr, typeof<BsonString>) :> Expression |> nullSafe  
                 | t when t = typeof<byte[]> -> Expression.New(typeof<BsonBinaryData>.GetConstructor([| typeof<byte[]> |]), valueExpr) 
                 | t when t = typeof<Int32> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
                 | t when t = typeof<Int64> -> Expression.Convert(valueExpr, typeof<BsonValue>)
                 | t when t = typeof<Guid> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
+                | t when t = typeof<bool> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
                 | t when t = typeof<float> -> Expression.Convert(valueExpr, typeof<BsonValue>)
                 | t when t = typeof<Decimal> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
                 | t when t = typeof<Decimal128> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
@@ -188,7 +197,7 @@ module ExpressionWriter =
                                     Expression.Constant(BsonNull.Value, typeof<BsonValue>),
                                     Expression.Convert(build(t, vobj), typeof<BsonValue>)
                                  )
-                         )
+                         ) |> nullSafe
                          
             writeValue pr.PropertyType propValue
                 

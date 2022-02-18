@@ -25,6 +25,7 @@ module WriterBuildTests =
     [<TestCase(typeof<TestClassWithEnumString>)>]
     [<TestCase(typeof<TestClassWithStringDictionary>)>]
     [<TestCase(typeof<TestClassWithIntDictionary>)>]
+    [<TestCase(typeof<TestFlatWithDefaultValuesClass>)>]
     [<TestCase(typeof<TestClassWithLongDictionary>)>]
     [<TestCase(typeof<TestClassWithSubClassDictionary>)>]
     [<TestCase(typeof<TestClassWithNullable>)>]
