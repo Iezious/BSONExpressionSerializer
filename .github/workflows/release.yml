@@ -20,4 +20,4 @@ jobs:
       - name: Push
         run: dotnet nuget push Iezious.Libs.BSONExpressionSerializer.${VERSION}.nupkg --source https://nuget.pkg.github.com/iezious/index.json --api-key ${GITHUB_TOKEN}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
