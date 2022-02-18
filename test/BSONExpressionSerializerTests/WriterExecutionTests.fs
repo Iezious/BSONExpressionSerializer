@@ -5,6 +5,7 @@ open System.Collections.Generic
 open BSONExpressionSerializerTests
 open Iezious.Libs.BSONExpressionSerializer
 open MongoDB.Bson
+open MongoDB.Bson.Serialization.Attributes
 open NUnit.Framework
 open FluentAssertions
 open Utils
@@ -168,7 +169,7 @@ module WriterExecutionTests =
         let data = {
             TestFlatClassWithBsonId.Name = null
             TestFlatClassWithBsonId.Count = 1 
-            TestFlatClassWithBsonId._id = ObjectId.GenerateNewId() 
+            TestFlatClassWithBsonId._id = ObjectId.GenerateNewId() |> BsonObjectId 
         }        
         
         let convert = ExpressionWriter.CreateWriter<TestFlatClassWithBsonId>()
@@ -549,8 +550,6 @@ module WriterExecutionTests =
         test["Payload"].AsBsonDocument["SomeKey"].AsInt32.Should().Be(11, "") |> ignore
         test["Payload"].AsBsonDocument["OtherKey"].AsString.Should().Be("ddqwqd", "") |> ignore
         
-        
-
     [<Test>]
     let ``Test write of object with bson document and ignored null``() =
         let data = { 
@@ -563,5 +562,32 @@ module WriterExecutionTests =
         
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
         test.Contains("Payload").Should().Be(false, "") |> ignore
+        
+    [<Test>]
+    let ``Test write of object binary data set to null``() =
+        let data = { 
+                      TestClassBinaryData.Name = "11"
+                      TestClassBinaryData.Payload = null
+                   }
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassBinaryData>()
+        let test = convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test.Contains("Payload").Should().Be(false, "") |> ignore
+        
+                
+    [<Test>]
+    let ``Test write of object binary data``() =
+        let data = { 
+                      TestClassBinaryData.Name = "11"
+                      TestClassBinaryData.Payload = Security.Cryptography.RandomNumberGenerator.GetBytes(100)
+                   }
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassBinaryData>()
+        let test = convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test["Payload"].AsByteArray.Should().BeEquivalentTo(data.Payload, "") |> ignore
         
         
