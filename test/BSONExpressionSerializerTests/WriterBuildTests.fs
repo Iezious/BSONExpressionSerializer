@@ -2,15 +2,13 @@ namespace BSONExpressionSerializerTests
 
 open System
 open System.Linq.Expressions
-open BSONExpressionSerializerTests
 open Iezious.Libs.BSONExpressionSerializer
 open MongoDB.Bson
 open NUnit.Framework
 
-
 [<TestFixture>]
-module ReaderBuildTests =
-    
+module WriterBuildTests =
+        
     [<TestCase(typeof<TestFlatClass>)>]
     [<TestCase(typeof<TestFlatClassWithObjectID>)>]
     [<TestCase(typeof<TestFlatClassWithBsonId>)>]
@@ -21,31 +19,31 @@ module ReaderBuildTests =
     [<TestCase(typeof<TestFlatClassWithOptionValue>)>]
     [<TestCase(typeof<TestFlatClassWithVOptionString>)>]
     [<TestCase(typeof<TestFlatClassWithVOptionDate>)>]
-    [<TestCase(typeof<TestClassWithLongDictionary>)>]    
     [<TestCase(typeof<TestClassWithSubObjectOption>)>]
-    [<TestCase(typeof<TestFlatWithDefaultValuesClass>)>]
     [<TestCase(typeof<TestFlatClassWithVOptionLong>)>]
     [<TestCase(typeof<TestClassWithEnumInt>)>]
     [<TestCase(typeof<TestClassWithEnumString>)>]
     [<TestCase(typeof<TestClassWithStringDictionary>)>]
     [<TestCase(typeof<TestClassWithIntDictionary>)>]
+    [<TestCase(typeof<TestFlatWithDefaultValuesClass>)>]
+    [<TestCase(typeof<TestClassWithLongDictionary>)>]
     [<TestCase(typeof<TestClassWithSubClassDictionary>)>]
     [<TestCase(typeof<TestClassWithNullable>)>]
-    
-    let ``Test that we don't fail on lambda build``(t: Type) =
-        let param = Expression.Parameter(typeof<BsonDocument>)
-        let expr = ExpressionReader.buildReader(t, param)
+    let ``Test that we don't fail on writer lambda build``(t: Type) =
+        let param = Expression.Parameter(t)
+        let expr = ExpressionWriter.build(t, param)
 //        let f = Expression.Lambda(expr, Expression.Parameter(typeof<BsonDocument>)).Compile()
-        ()    
+        ()
 
     [<Test>]
-    let ``Test that lambda compile works``() =
-        ExpressionReader.CreateReader<TestFlatClass>() |> ignore
+    let ``Test that writer lambda compile works``() =
+        ExpressionWriter.CreateWriter<TestFlatClass>() |> ignore
+                
+    [<Test>]
+    let ``Test that writer lambda compile works for subobjects``() =
+        ExpressionWriter.CreateWriter<TestClassWithSubObject>() |> ignore
+                     
         
     [<Test>]
-    let ``Test that lambda compile works for subobjects``() =
-        ExpressionReader.CreateReader<TestClassWithSubObject>() |> ignore
-        
-    [<Test>]
-    let ``Test that lambda compile works for arrays``() =
-        ExpressionReader.CreateReader<TestFlatClassWithArrayOfIntValues>() |> ignore        
+    let ``Test that writer lambda compile works for arrays``() =
+        ExpressionWriter.CreateWriter<TestFlatClassWithArrayOfIntValues>() |> ignore

@@ -43,6 +43,13 @@ module ExpressionReader =
                         Expression.Call(t.GetMethod("Some", BindingFlags.Static + BindingFlags.Public), readValue argt bsonExpr)        
                     )
 
+            and nullSafe builder (t: Type) (bsonExpr: Expression) : Expression =
+                Expression.Condition(
+                        Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.IsBsonNull)),
+                        Expression.Constant(null, t),
+                        builder t bsonExpr
+                    )
+                
             and readArray(t: Type) (bsonExpr: Expression) : Expression =
                 let cnt = Expression.Variable(typeof<int32>)
                 let arr = Expression.Variable(t)
@@ -120,11 +127,20 @@ module ExpressionReader =
                 else
                     Expression.Constant(null)
                     
+            and readNullable(t: Type) (bsonExpr: Expression) : Expression =
+                let tk = t.GenericTypeArguments[0]
+                let ctor = t.GetConstructor([|tk|])
+                Expression.Condition(
+                         Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.IsBsonNull)),
+                         Expression.Constant(null, t),
+                         Expression.New(ctor, readValue tk bsonExpr)
+                    )
 
             and readValue (ofType:Type) (bsonExpr: Expression) : Expression =
                 match ofType with
                 | t when t = typeof<string> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsString)) 
                 | t when t = typeof<byte[]> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsByteArray)) 
+                | t when t = typeof<bool> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsBoolean)) 
                 | t when t = typeof<Int32> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt32)) 
                 | t when t = typeof<Int64> ->
                            Expression.Condition(
@@ -141,24 +157,21 @@ module ExpressionReader =
                            )
                 | t when t = typeof<Decimal> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsDecimal)) 
                 | t when t = typeof<Decimal128> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsDecimal128)) 
-                | t when t = typeof<Nullable<Int32>> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableInt32)) 
-                | t when t = typeof<Nullable<Int64>> ->Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableInt64)) 
-                | t when t = typeof<Nullable<decimal>> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableDecimal)) 
-                | t when t = typeof<Nullable<Guid>> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableGuid)) 
-                | t when t = typeof<Nullable<float>> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsNullableDouble)) 
                 | t when t = typeof<DateTime> -> Expression.Call(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.ToUniversalTime), [||])
                 | t when t = typeof<BsonObjectId> -> Expression.Convert(Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsObjectId)), typeof<BsonObjectId>) 
                 | t when t = typeof<ObjectId> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsObjectId))
                 | t when t.IsEnum
                       -> readEnum(t) bsonExpr
+                | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Nullable<_>>.GetGenericTypeDefinition()
+                      -> readNullable(t) bsonExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition()
                       -> readOption(t) bsonExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
                       -> readOption(t) bsonExpr
                 | t when t.IsArray
-                      -> readArray(t) bsonExpr
+                      -> nullSafe readArray t bsonExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Dictionary<_,_>>.GetGenericTypeDefinition()
-                      -> readDict(t) bsonExpr
+                      -> nullSafe readDict t bsonExpr
                 | t   ->
                          let paramDef = Expression.Parameter(typeof<BsonDocument>)
                          let param = Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsBsonDocument))

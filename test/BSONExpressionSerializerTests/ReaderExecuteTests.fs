@@ -3,6 +3,7 @@ namespace BSONExpressionSerializerTests
 open System
 open Iezious.Libs.BSONExpressionSerializer
 open NUnit.Framework
+open NUnit.Framework.Internal.Commands
 open Utils
 open MongoDB.Bson
 open FluentAssertions
@@ -21,8 +22,8 @@ module ReaderExecuteTests =
         test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore
         
     [<Test>]
-    let ``Test read read types``() =
-        let data = {| Name = "Tssa"; Date = DateTime.UtcNow; Count = 33; CountLong=142L; Value=222.23  |}
+    let ``Test read types``() =
+        let data = {| Name = "Tssa"; Date = DateTime.UtcNow; Is=true; Count = 33; CountLong=142L; Value=222.23  |}
         let convert = ExpressionReader.CreateReader<TestFlatDoublesClass>()
         let test =  convert.Invoke(!-> data) 
         
@@ -30,10 +31,11 @@ module ReaderExecuteTests =
         test.CountLong.Should().Be(data.CountLong, "") |> ignore  
         test.Value.Should().BeApproximately(data.Value, 0.0001, "") |> ignore  
         test.Name.Should().Be(data.Name, "") |> ignore
+        test.Is.Should().Be(data.Is, "") |> ignore
         test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore        
     
     [<Test>]
-    let ``Test read read types with conversion``() =
+    let ``Test read types with conversion``() =
         let data = {| Name = "Tssa"; Date = DateTime.UtcNow; Count = 33; CountLong=142; Value=222  |}
         let convert = ExpressionReader.CreateReader<TestFlatDoublesClass>()
         let test =  convert.Invoke(!-> data) 
@@ -204,7 +206,17 @@ module ReaderExecuteTests =
         test.SubArray[0].Name.Should().Be(data.SubArray[0].Name, "")  |> ignore
         test.SubArray[0].Count.Should().Be(data.SubArray[0].Count, "")  |> ignore
         test.SubArray[1].Name.Should().Be(data.SubArray[1].Name, "")  |> ignore
-        test.SubArray[1].Count.Should().Be(data.SubArray[1].Count, "")  |> ignore
+        test.SubArray[1].Count.Should().Be(data.SubArray[1].Count, "")  |> ignore                
+    [<Test>]
+    let ``Test read of array set to null``() =
+        let data = {| Name = "Tssa"
+                      SubArray = null
+                   |}
+        let convert = ExpressionReader.CreateReader<TestFlatClassWithArrayOfObjects>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.SubArray.Should().BeNull("") |> ignore
         
     [<Test>]
     let ``Test read of string dictionary``() =
@@ -217,7 +229,18 @@ module ReaderExecuteTests =
         test.Name.Should().Be(data.Name, "") |> ignore
         test.Dict["KeyA"].Should().Be(data.Dict.KeyA, "") |> ignore        
         test.Dict["KeyB"].Should().Be(data.Dict.KeyB, "") |> ignore        
-        test.Dict["KeyC"].Should().Be(data.Dict.KeyC, "") |> ignore        
+        test.Dict["KeyC"].Should().Be(data.Dict.KeyC, "") |> ignore           
+    
+    [<Test>]
+    let ``Test read of dictionary set to null``() =
+        let data = {| Name = "Tssa"
+                      Dict = null
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassWithStringDictionary>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        (test.Dict :> obj).Should().BeNull("") |> ignore
                 
     [<Test>]
     let ``Test read of int dictionary``() =
@@ -245,4 +268,44 @@ module ReaderExecuteTests =
         test.Dict.Count.Should().Be(2, "") |> ignore
         test.Dict["KeyA"].Name.Should().Be(data.Dict.KeyA.Name, "") |> ignore        
         test.Dict["KeyB"].Count.Should().Be(data.Dict.KeyB.Count, "") |> ignore        
+            
+    [<Test>]
+    let ``Test read of object with nullable null and empty``() =
+        let data = {| Name = "Tssa"
+                      CountNullable = null
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassWithNullable>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.CountNullable.Should().BeNull("") |> ignore
+        test.DateNullable.Should().BeNull("") |> ignore
+                    
+    [<Test>]
+    let ``Test read of object with nullable filled with values``() =
+        let data = {| Name = "Tssa"
+                      CountNullable = 22
+                      DateNullable = DateTime.UtcNow
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassWithNullable>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.CountNullable.Should().NotBeNull("") |> ignore
+        test.CountNullable.Value.Should().Be(data.CountNullable, "") |> ignore
+        test.DateNullable.Should().NotBeNull("") |> ignore
+        test.DateNullable.Value.Should().BeCloseTo(data.DateNullable, TimeSpan.FromMilliseconds(1), "") |> ignore
+        
+            
+    [<Test>]
+    let ``Test read of object with default strange value``() =
+        let data = {| 
+                      Count = 11
+                   |}
+        let convert = ExpressionReader.CreateReader<TestFlatWithDefaultAndNull>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be("zz", "") |> ignore
+        test.Count.Should().Be(data.Count, "") |> ignore
         

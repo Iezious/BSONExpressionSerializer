@@ -5,6 +5,8 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <AssemblyName>Iezious.Libs.BSONExpressionSerializer</AssemblyName>
         <RootNamespace>Iezious.Libs.BSONExpressionSerializer</RootNamespace>
+        <PackageVersion>1.0.1</PackageVersion>
+        <RepositoryUrl>https://github.com/Iezious/BSONExpressionSerializer</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>
@@ -15,6 +17,8 @@
       <Compile Include="Utils.fs" />
       <Compile Include="ExpressionReaderRegistry.fs" />
       <Compile Include="ExpressionReader.fs" />
+      <Compile Include="ExpressionWriter.fs" />
+      <Compile Include="ExpressionStreamReader.fs" />
     </ItemGroup>
 
 </Project>

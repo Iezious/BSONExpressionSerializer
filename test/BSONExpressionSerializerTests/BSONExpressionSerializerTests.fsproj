@@ -11,6 +11,8 @@
         <Compile Include="TestData.fs" />
         <Compile Include="ReaderBuildTests.fs" />
         <Compile Include="ReaderExecuteTests.fs" />
+        <Compile Include="WriterBuildTests.fs" />
+        <Compile Include="WriterExecutionTests.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
@@ -24,7 +26,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\src\BSONExpressionSerializer\BSONExpressionSerializer.fsproj" />
+      <ProjectReference Include="..\..\src\Iezious.Libs.BSONExpressionSerializer\Iezious.Libs.BSONExpressionSerializer.fsproj" />
     </ItemGroup>
 
 </Project>

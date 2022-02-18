@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BSONExpressionSerializer", "src\BSONExpressionSerializer\BSONExpressionSerializer.fsproj", "{52E8C3AF-0E40-49E4-BF65-7F051EE73A17}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Iezious.Libs.BSONExpressionSerializer", "src\Iezious.Libs.BSONExpressionSerializer\Iezious.Libs.BSONExpressionSerializer.fsproj", "{52E8C3AF-0E40-49E4-BF65-7F051EE73A17}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BSONExpressionSerializerTests", "test\BSONExpressionSerializerTests\BSONExpressionSerializerTests.fsproj", "{18FFC2AE-BCD9-4081-8D80-838DA3AA5740}"
 EndProject
