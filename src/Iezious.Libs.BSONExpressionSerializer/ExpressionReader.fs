@@ -33,6 +33,9 @@ module ExpressionReader =
                             let parseMethod = typeof<Enum>.GetMethod("Parse", 1, [| typeof<string> |]).MakeGenericMethod(t)
                             Expression.Call(parseMethod, getter)
                 | _ -> Expression.Convert(Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt32)), t)
+                
+            let inline readBinary (t:Type) (bsonExpr:Expression) =
+                Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsByteArray)) :> Expression                
 
             let readBsonDocument(t: Type) (bsonExpr: Expression) : Expression =
                 let m = t.GetMethod(nameof(Unchecked.defaultof<BsonDocument>.DeepClone), [||])
@@ -147,7 +150,6 @@ module ExpressionReader =
             and readValue (ofType:Type) (bsonExpr: Expression) : Expression =
                 match ofType with
                 | t when t = typeof<string> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsString)) 
-                | t when t = typeof<byte[]> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsByteArray)) 
                 | t when t = typeof<bool> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsBoolean)) 
                 | t when t = typeof<Int32> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt32)) 
                 | t when t = typeof<Int64> ->
@@ -170,6 +172,8 @@ module ExpressionReader =
                 | t when t = typeof<ObjectId> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsObjectId))
                 | t when t = typeof<BsonDocument>
                      -> readBsonDocument t bsonExpr
+                | t when t = typeof<byte[]>
+                     -> nullSafe readBinary t bsonExpr
                 | t when t.IsEnum
                       -> readEnum(t) bsonExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Nullable<_>>.GetGenericTypeDefinition()

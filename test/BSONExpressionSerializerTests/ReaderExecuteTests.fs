@@ -346,4 +346,41 @@ module ReaderExecuteTests =
         
         test.Name.Should().Be(data.Name, "") |> ignore
         (test.Payload :> obj).Should().BeNull("") |> ignore
+                            
+    [<Test>]
+    let ``Test read of binary data without payload``() =
+        let data = {| 
+                      Name = "wqdqwqwdqdw"
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassBinaryData>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        (test.Payload :> obj).Should().BeNull("") |> ignore
+                                    
+    [<Test>]
+    let ``Test read of binary data with null payload``() =
+        let data = {| 
+                      Name = "wqdqwqwdqdw"
+                      Payload = null
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassBinaryData>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        (test.Payload :> obj).Should().BeNull("") |> ignore
+        
+    [<Test>]
+    let ``Test read of binary data with payload``() =
+        let data = {| 
+                      Name = "wqdqwqwdqdw"
+                      Payload = System.Security.Cryptography.RandomNumberGenerator.GetBytes(100)
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassBinaryData>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.Payload.Should().BeEquivalentTo(data.Payload, "") |> ignore
+        
+        
         

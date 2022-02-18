@@ -203,3 +203,11 @@ type TestClassWithBsonDocumentWithDefault = {
     Payload: BsonDocument 
 }
     
+[<CLIMutable>]
+type TestClassBinaryData = {
+    Name: string
+    [<BsonIgnoreIfNull>]
+    Payload: byte[] 
+}
+    
+    
