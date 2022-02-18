@@ -297,3 +297,15 @@ module ReaderExecuteTests =
         test.DateNullable.Should().NotBeNull("") |> ignore
         test.DateNullable.Value.Should().BeCloseTo(data.DateNullable, TimeSpan.FromMilliseconds(1), "") |> ignore
         
+            
+    [<Test>]
+    let ``Test read of object with default strange value``() =
+        let data = {| 
+                      Count = 11
+                   |}
+        let convert = ExpressionReader.CreateReader<TestFlatWithDefaultAndNull>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be("zz", "") |> ignore
+        test.Count.Should().Be(data.Count, "") |> ignore
+        
