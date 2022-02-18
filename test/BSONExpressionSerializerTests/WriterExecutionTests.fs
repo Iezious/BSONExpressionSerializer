@@ -350,3 +350,43 @@ module WriterExecutionTests =
         
         test.Contains("SubObject").Should().Be(false, "") |> ignore
 
+
+    [<Test>]
+    let ``Test write of object array``() =
+        let data = {
+            TestFlatClassWithArrayOfObjects._id = ObjectId.GenerateNewId()
+            TestFlatClassWithArrayOfObjects.Name = "qwqdqsqddq"
+            TestFlatClassWithArrayOfObjects.Count = 23123
+            TestFlatClassWithArrayOfObjects.SubArray = [|
+                { Name = "oiwdqwjdoipqwd";  Count = 2131; Date = DateTime.UtcNow } 
+                { Name = "qwdkliqjpdowj";  Count = 2131221; Date = DateTime.UtcNow.AddHours(2) } 
+                { Name = "poqwpoqwdpod";  Count = 22; Date = DateTime.UtcNow.AddHours(32) } 
+            |]
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestFlatClassWithArrayOfObjects>()
+        let test = convert.Invoke(data)
+        
+        test["Count"].AsInt64.Should().Be(data.Count, "") |> ignore
+        test["SubArray"].AsBsonArray.Count.Should().Be(data.SubArray.Length, "") |> ignore
+        for i in 0..data.SubArray.Length-1 do
+            test["SubArray"].AsBsonArray[i].AsBsonDocument["Name"].AsString.Should().Be(data.SubArray[i].Name, "") |> ignore
+            test["SubArray"].AsBsonArray[i].AsBsonDocument["Count"].AsInt32.Should().Be(data.SubArray[i].Count, "") |> ignore
+    
+    [<Test>]
+    let ``Test write of object array set to null``() =
+        let data = {
+            TestFlatClassWithArrayOfObjects._id = ObjectId.GenerateNewId()
+            TestFlatClassWithArrayOfObjects.Name = "qwqdqsqddq"
+            TestFlatClassWithArrayOfObjects.Count = 23123
+            TestFlatClassWithArrayOfObjects.SubArray = null
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestFlatClassWithArrayOfObjects>()
+        let test = convert.Invoke(data)
+        
+        test["Count"].AsInt64.Should().Be(data.Count, "") |> ignore
+        test["SubArray"].IsBsonNull.Should().Be(true, "") |> ignore
+
+        
+

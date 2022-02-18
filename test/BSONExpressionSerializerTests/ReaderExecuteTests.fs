@@ -3,6 +3,7 @@ namespace BSONExpressionSerializerTests
 open System
 open Iezious.Libs.BSONExpressionSerializer
 open NUnit.Framework
+open NUnit.Framework.Internal.Commands
 open Utils
 open MongoDB.Bson
 open FluentAssertions
@@ -205,7 +206,17 @@ module ReaderExecuteTests =
         test.SubArray[0].Name.Should().Be(data.SubArray[0].Name, "")  |> ignore
         test.SubArray[0].Count.Should().Be(data.SubArray[0].Count, "")  |> ignore
         test.SubArray[1].Name.Should().Be(data.SubArray[1].Name, "")  |> ignore
-        test.SubArray[1].Count.Should().Be(data.SubArray[1].Count, "")  |> ignore
+        test.SubArray[1].Count.Should().Be(data.SubArray[1].Count, "")  |> ignore                
+    [<Test>]
+    let ``Test read of array set to null``() =
+        let data = {| Name = "Tssa"
+                      SubArray = null
+                   |}
+        let convert = ExpressionReader.CreateReader<TestFlatClassWithArrayOfObjects>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.SubArray.Should().BeNull("") |> ignore
         
     [<Test>]
     let ``Test read of string dictionary``() =
@@ -218,7 +229,18 @@ module ReaderExecuteTests =
         test.Name.Should().Be(data.Name, "") |> ignore
         test.Dict["KeyA"].Should().Be(data.Dict.KeyA, "") |> ignore        
         test.Dict["KeyB"].Should().Be(data.Dict.KeyB, "") |> ignore        
-        test.Dict["KeyC"].Should().Be(data.Dict.KeyC, "") |> ignore        
+        test.Dict["KeyC"].Should().Be(data.Dict.KeyC, "") |> ignore           
+    
+    [<Test>]
+    let ``Test read of dictionary set to null``() =
+        let data = {| Name = "Tssa"
+                      Dict = null
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassWithStringDictionary>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        (test.Dict :> obj).Should().BeNull("") |> ignore
                 
     [<Test>]
     let ``Test read of int dictionary``() =

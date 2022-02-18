@@ -184,9 +184,9 @@ module ExpressionWriter =
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
                       -> writeVOption(t) valueExpr
                 | t when t.IsArray
-                      -> writeArray(t) valueExpr
+                      -> writeArray(t) valueExpr |> nullSafe
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Dictionary<_,_>>.GetGenericTypeDefinition()
-                      -> writeDict(t) valueExpr
+                      -> writeDict(t) valueExpr |> nullSafe
                 | t   ->
                          let vobj = Expression.Variable(t)
                          Expression.Block(
