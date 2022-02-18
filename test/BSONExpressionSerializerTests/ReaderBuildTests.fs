@@ -31,6 +31,8 @@ module ReaderBuildTests =
     [<TestCase(typeof<TestClassWithIntDictionary>)>]
     [<TestCase(typeof<TestClassWithSubClassDictionary>)>]
     [<TestCase(typeof<TestClassWithNullable>)>]
+    [<TestCase(typeof<TestClassWithBsonDocument>)>]
+    [<TestCase(typeof<TestClassWithBsonDocumentWithDefault>)>]
     
     let ``Test that we don't fail on lambda build``(t: Type) =
         let param = Expression.Parameter(typeof<BsonDocument>)

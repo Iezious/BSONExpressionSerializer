@@ -7,7 +7,7 @@ open Iezious.Libs.BSONExpressionSerializer
 open MongoDB.Bson
 open NUnit.Framework
 open FluentAssertions
-open NUnit.Framework.Internal.Commands
+open Utils
 
 [<TestFixture>]
 module WriterExecutionTests =
@@ -534,3 +534,34 @@ module WriterExecutionTests =
         
         test["EnumData"].AsString.Should().Be(data.EnumData |> string, "") |> ignore
 
+
+    [<Test>]
+    let ``Test write of object with bson document``() =
+        let data = { 
+                      TestClassWithBsonDocument.Name = "11"
+                      TestClassWithBsonDocument.Payload = !-> {| SomeKey = 11; OtherKey = "ddqwqd" |}
+                   }
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithBsonDocument>()
+        let test = convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test["Payload"].AsBsonDocument["SomeKey"].AsInt32.Should().Be(11, "") |> ignore
+        test["Payload"].AsBsonDocument["OtherKey"].AsString.Should().Be("ddqwqd", "") |> ignore
+        
+        
+
+    [<Test>]
+    let ``Test write of object with bson document and ignored null``() =
+        let data = { 
+                      TestClassWithBsonDocumentWithDefault.Name = "11"
+                      TestClassWithBsonDocumentWithDefault.Payload = null
+                   }
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithBsonDocumentWithDefault>()
+        let test = convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test.Contains("Payload").Should().Be(false, "") |> ignore
+        
+        
