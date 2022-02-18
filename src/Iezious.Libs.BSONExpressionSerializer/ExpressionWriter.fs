@@ -4,8 +4,6 @@ open System
 open System.Collections.Generic
 open System.Linq.Expressions
 open System.Reflection
-open System.Reflection.Metadata
-open System.Xml.Schema
 open MongoDB.Bson
 open MongoDB.Bson.Serialization.Attributes
 
@@ -241,3 +239,8 @@ module ExpressionWriter =
         steps.Add(_v_res)
         Expression.Block([_v_res], steps)
 
+    let CreateWriter<'t>() =
+        let obj = Expression.Parameter(typeof<'t>)
+        let expr = build(typeof<'t>, obj)
+        let l = Expression.Lambda<Func<'t, BsonDocument>>(expr, obj)
+        l.Compile()

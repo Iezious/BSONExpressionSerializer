@@ -12,6 +12,7 @@
         <Compile Include="ReaderBuildTests.fs" />
         <Compile Include="ReaderExecuteTests.fs" />
         <Compile Include="WriterBuildTests.fs" />
+        <Compile Include="WriterExecutionTests.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 

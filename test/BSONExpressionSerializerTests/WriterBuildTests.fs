@@ -32,4 +32,17 @@ module WriterBuildTests =
         let param = Expression.Parameter(t)
         let expr = ExpressionWriter.build(t, param)
 //        let f = Expression.Lambda(expr, Expression.Parameter(typeof<BsonDocument>)).Compile()
-        ()    
+        ()
+
+    [<Test>]
+    let ``Test that writer lambda compile works``() =
+        ExpressionWriter.CreateWriter<TestFlatClass>() |> ignore
+                
+    [<Test>]
+    let ``Test that writer lambda compile works for subobjects``() =
+        ExpressionWriter.CreateWriter<TestClassWithSubObject>() |> ignore
+                     
+        
+    [<Test>]
+    let ``Test that writer lambda compile works for arrays``() =
+        ExpressionWriter.CreateWriter<TestFlatClassWithArrayOfIntValues>() |> ignore
