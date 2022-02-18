@@ -43,6 +43,13 @@ module ExpressionReader =
                         Expression.Call(t.GetMethod("Some", BindingFlags.Static + BindingFlags.Public), readValue argt bsonExpr)        
                     )
 
+            and nullSafe builder (t: Type) (bsonExpr: Expression) : Expression =
+                Expression.Condition(
+                        Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.IsBsonNull)),
+                        Expression.Constant(null, t),
+                        builder t bsonExpr
+                    )
+                
             and readArray(t: Type) (bsonExpr: Expression) : Expression =
                 let cnt = Expression.Variable(typeof<int32>)
                 let arr = Expression.Variable(t)
@@ -162,9 +169,9 @@ module ExpressionReader =
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
                       -> readOption(t) bsonExpr
                 | t when t.IsArray
-                      -> readArray(t) bsonExpr
+                      -> nullSafe readArray t bsonExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Dictionary<_,_>>.GetGenericTypeDefinition()
-                      -> readDict(t) bsonExpr
+                      -> nullSafe readDict t bsonExpr
                 | t   ->
                          let paramDef = Expression.Parameter(typeof<BsonDocument>)
                          let param = Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsBsonDocument))

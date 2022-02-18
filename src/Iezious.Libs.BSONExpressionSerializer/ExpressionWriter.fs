@@ -154,17 +154,23 @@ module ExpressionWriter =
                         Expression.Constant(BsonNull.Value, typeof<BsonValue>)
                     )
                 
-            and writeWithNullCheck (valueExpr: Expression) (writeExpr:Expression) =
+            and nullSafe builder (t: Type) (valueExpr: Expression)  =
                 Expression.Condition(
                         Expression.Equal(valueExpr, Expression.Constant(null)),
                         Expression.Constant(BsonNull.Value) |> bval,
-                        writeExpr |> bval
+                        (builder (t: Type) (valueExpr: Expression)) |> bval
                     ) :> Expression
                 
             and writeValue(ofType: Type) (valueExpr: Expression) : Expression =
-                let nullSafe = writeWithNullCheck valueExpr
+                let inline nullCheck expr =
+                    Expression.Condition(
+                        Expression.Equal(valueExpr, Expression.Constant(null)),
+                        Expression.Constant(BsonNull.Value) |> bval,
+                        expr |> bval
+                    ) :> Expression
+                
                 match ofType with
-                | t when t = typeof<string> -> Expression.Convert(valueExpr, typeof<BsonString>) :> Expression |> nullSafe  
+                | t when t = typeof<string> -> Expression.Convert(valueExpr, typeof<BsonString>) :> Expression |> nullCheck  
                 | t when t = typeof<byte[]> -> Expression.New(typeof<BsonBinaryData>.GetConstructor([| typeof<byte[]> |]), valueExpr) 
                 | t when t = typeof<Int32> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
                 | t when t = typeof<Int64> -> Expression.Convert(valueExpr, typeof<BsonValue>)
@@ -184,9 +190,9 @@ module ExpressionWriter =
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
                       -> writeVOption(t) valueExpr
                 | t when t.IsArray
-                      -> writeArray(t) valueExpr |> nullSafe
+                      -> nullSafe writeArray t valueExpr 
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Dictionary<_,_>>.GetGenericTypeDefinition()
-                      -> writeDict(t) valueExpr |> nullSafe
+                      -> nullSafe writeDict t valueExpr 
                 | t   ->
                          let vobj = Expression.Variable(t)
                          Expression.Block(
@@ -197,7 +203,7 @@ module ExpressionWriter =
                                     Expression.Constant(BsonNull.Value, typeof<BsonValue>),
                                     Expression.Convert(build(t, vobj), typeof<BsonValue>)
                                  )
-                         ) |> nullSafe
+                         ) |> nullCheck
                          
             writeValue pr.PropertyType propValue
                 
