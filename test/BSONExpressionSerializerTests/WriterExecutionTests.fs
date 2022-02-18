@@ -1,6 +1,8 @@
 namespace BSONExpressionSerializerTests
 
 open System
+open System.Collections.Generic
+open BSONExpressionSerializerTests
 open Iezious.Libs.BSONExpressionSerializer
 open MongoDB.Bson
 open NUnit.Framework
@@ -388,5 +390,108 @@ module WriterExecutionTests =
         test["Count"].AsInt64.Should().Be(data.Count, "") |> ignore
         test["SubArray"].IsBsonNull.Should().Be(true, "") |> ignore
 
+    [<Test>]
+    let ``Test write of dictionary set to null``() =
+        let data = {
+            TestClassWithStringDictionary.Name = "qwqdqsqddq"
+            TestClassWithStringDictionary.Dict = null
+        }        
         
+        let convert = ExpressionWriter.CreateWriter<TestClassWithStringDictionary>()
+        let test = convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test["Dict"].IsBsonNull.Should().Be(true, "") |> ignore
+
+    [<Test>]
+    let ``Test write of dictionary set to default null``() =
+        let data = {
+            TestClassWithStringDictionaryAndDefaultValue.Name = "qwqdqsqddq"
+            TestClassWithStringDictionaryAndDefaultValue.Dict = null
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithStringDictionaryAndDefaultValue>()
+        let test = convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test.Contains("Dict").Should().Be(false, "") |> ignore
+
+
+    [<Test>]
+    let ``Test write of string dictionary``() =
+        let data = {
+            TestClassWithStringDictionary.Name = "qwqdqsqddq"
+            TestClassWithStringDictionary.Dict = Dictionary(["KeyA", "wqdqwdwq"; "KeyB", "wqdqwdqwqwddqw"] |> dict)
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithStringDictionary>()
+        let test = convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test["Dict"].AsBsonDocument["KeyA"].Should().Be(data.Dict["KeyA"], "") |> ignore
+        test["Dict"].AsBsonDocument["KeyB"].Should().Be(data.Dict["KeyB"], "") |> ignore
+
+    [<Test>]
+    let ``Test write of int dictionary``() =
+        let data = {
+            TestClassWithIntDictionary.Name = "qwqdqsqddq"
+            TestClassWithIntDictionary.Dict = Dictionary(["KeyA", 22; "KeyB", 33] |> dict)
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithIntDictionary>()
+        let test = convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test["Dict"].AsBsonDocument["KeyA"].Should().Be(data.Dict["KeyA"], "") |> ignore
+        test["Dict"].AsBsonDocument["KeyB"].Should().Be(data.Dict["KeyB"], "") |> ignore
+        
+    [<Test>]
+    let ``Test write of subobject dictionary``() =
+        let data = {
+            TestClassWithSubClassDictionary.Name = "qwqdqsqddq"
+            TestClassWithSubClassDictionary.Dict = [
+                 "KeyA", { Name = "oiwdqwjdoipqwd";  Count = 2131; Date = DateTime.UtcNow } 
+                 "KeyB", { Name = "wqdqwqdwdwq";  Count = 1111; Date = DateTime.UtcNow.AddHours(3) } 
+            ] |> dict |> Dictionary
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithSubClassDictionary>()
+        let test = convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test["Dict"].AsBsonDocument["KeyA"].AsBsonDocument["Name"].AsString.Should().Be(data.Dict["KeyA"].Name, "") |> ignore
+        test["Dict"].AsBsonDocument["KeyA"].AsBsonDocument["Count"].AsInt32.Should().Be(data.Dict["KeyA"].Count, "") |> ignore
+        test["Dict"].AsBsonDocument["KeyA"].AsBsonDocument["Date"].ToUniversalTime().Should().BeCloseTo(data.Dict["KeyA"].Date, TimeSpan.FromMilliseconds(1), "") |> ignore
+        test["Dict"].AsBsonDocument["KeyB"].AsBsonDocument["Name"].AsString.Should().Be(data.Dict["KeyB"].Name, "") |> ignore
+        test["Dict"].AsBsonDocument["KeyB"].AsBsonDocument["Count"].AsInt32.Should().Be(data.Dict["KeyB"].Count, "") |> ignore
+        test["Dict"].AsBsonDocument["KeyB"].AsBsonDocument["Date"].ToUniversalTime().Should().BeCloseTo(data.Dict["KeyB"].Date, TimeSpan.FromMilliseconds(1), "") |> ignore
+        
+        
+    [<Test>]
+    let ``Test write of int enum``() =
+        let data = {
+            TestClassWithEnumInt._id = ObjectId.GenerateNewId() |> BsonObjectId
+            TestClassWithEnumInt.Name = "wqdijqwoijdqodwq"
+            TestClassWithEnumInt.Count = 2323131231L
+            TestClassWithEnumInt.EnumData = TestEnum.OptionB
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithEnumInt>()
+        let test = convert.Invoke(data)
+        
+        test["EnumData"].AsInt32.Should().Be(data.EnumData |> int32, "") |> ignore
+
+    [<Test>]
+    let ``Test write of string enum``() =
+        let data = {
+            TestClassWithEnumString._id = ObjectId.GenerateNewId() |> BsonObjectId
+            TestClassWithEnumString.Name = "wqdijqwoijdqodwq"
+            TestClassWithEnumString.Count = 2323131231L
+            TestClassWithEnumString.EnumData = TestEnum.OptionB
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithEnumString>()
+        let test = convert.Invoke(data)
+        
+        test["EnumData"].AsString.Should().Be(data.EnumData |> string, "") |> ignore
 

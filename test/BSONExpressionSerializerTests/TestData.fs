@@ -140,6 +140,13 @@ type TestClassWithEnumString = {
 type TestClassWithStringDictionary = {
     Name: string
     Dict: Dictionary<string, string> 
+}    
+
+[<CLIMutable>]
+type TestClassWithStringDictionaryAndDefaultValue = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Dict: Dictionary<string, string> 
 }
        
 [<CLIMutable>]
