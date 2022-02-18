@@ -245,4 +245,32 @@ module ReaderExecuteTests =
         test.Dict.Count.Should().Be(2, "") |> ignore
         test.Dict["KeyA"].Name.Should().Be(data.Dict.KeyA.Name, "") |> ignore        
         test.Dict["KeyB"].Count.Should().Be(data.Dict.KeyB.Count, "") |> ignore        
+            
+    [<Test>]
+    let ``Test read of object with nullable null and empty``() =
+        let data = {| Name = "Tssa"
+                      CountNullable = null
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassWithNullable>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.CountNullable.Should().BeNull("") |> ignore
+        test.DateNullable.Should().BeNull("") |> ignore
+                    
+    [<Test>]
+    let ``Test read of object with nullable filled with values``() =
+        let data = {| Name = "Tssa"
+                      CountNullable = 22
+                      DateNullable = DateTime.UtcNow
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassWithNullable>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.CountNullable.Should().NotBeNull("") |> ignore
+        test.CountNullable.Value.Should().Be(data.CountNullable, "") |> ignore
+        test.DateNullable.Should().NotBeNull("") |> ignore
+        test.DateNullable.Value.Should().BeCloseTo(data.DateNullable, TimeSpan.FromMilliseconds(1), "") |> ignore
         

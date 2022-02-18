@@ -1,5 +1,6 @@
 namespace BSONExpressionSerializerTests
 
+open System
 open System.Collections.Generic
 open MongoDB.Bson
 open MongoDB.Bson.Serialization.Attributes
@@ -133,6 +134,13 @@ type TestClassWithEnumString = {
 type TestClassWithStringDictionary = {
     Name: string
     Dict: Dictionary<string, string> 
+}
+       
+[<CLIMutable>]
+type TestClassWithNullable = {
+    Name: string
+    CountNullable: Nullable<int32> 
+    DateNullable: Nullable<DateTime> 
 }
         
 

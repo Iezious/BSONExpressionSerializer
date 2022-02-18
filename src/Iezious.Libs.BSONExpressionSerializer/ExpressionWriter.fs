@@ -11,6 +11,8 @@ open MongoDB.Bson.Serialization.Attributes
 
 module ExpressionWriter =
     
+    let inline private bval (v:Expression):Expression = Expression.Convert(v, typeof<BsonValue>)
+    
     let private getNameInBson(m:MemberInfo) =
         match m.GetCustomAttribute<BsonElementAttribute>() with
         | null -> m.Name
@@ -54,14 +56,25 @@ module ExpressionWriter =
                         let toStringMethod = pr.PropertyType.GetMethod("ToString", [||])
                         Expression.Call(valueExpr, toStringMethod)
                 | _ -> Expression.Convert(valueExpr, typeof<int32>)
-                |> fun e -> Expression.Convert(e, typeof<BsonValue>)
+                |> bval
                 
             let rec writeOption(t: Type) (valueExpr: Expression) : Expression =
                 let argt = t.GenericTypeArguments[0]
+                let method = t.GetMethod("get_IsNone", [|t|]);
+                
+                Expression.Condition( 
+                        Expression.Call(null, method, valueExpr),
+                        Expression.Constant(BsonNull.Value, typeof<BsonValue>),
+                        writeValue <| argt <| Expression.Property(valueExpr, nameof(Unchecked.defaultof<Option<_>>.Value)) |> bval
+                    )
+                
+            and writeVOption(t: Type) (valueExpr: Expression) : Expression =
+                let argt = t.GenericTypeArguments[0]
+                
                 Expression.Condition( 
                         Expression.Property(valueExpr, nameof(Unchecked.defaultof<Option<_>>.IsNone)),
                         Expression.Constant(BsonNull.Value, typeof<BsonValue>),
-                        writeValue <| argt <| Expression.Property(valueExpr, nameof(Unchecked.defaultof<Option<_>>.Value))
+                        writeValue <| argt <| Expression.Property(valueExpr, nameof(Unchecked.defaultof<Option<_>>.Value)) |> bval
                     )
                 
             and writeArray(t: Type) (valueExpr: Expression) : Expression =
@@ -87,7 +100,7 @@ module ExpressionWriter =
                             ),
                         stepout
                     ),
-                    Expression.Convert(arr, typeof<BsonValue>)
+                    bval arr
                 )
                 
             and writeDictAsDocument(t: Type) (valueExpr: Expression) : Expression =
@@ -139,7 +152,7 @@ module ExpressionWriter =
                 let t = nt.GetGenericArguments()[0]
                 Expression.Condition(
                         Expression.Property(valueExpr, "HasValue"),
-                        writeValue <| t  <| Expression.Property(valueExpr, "Value"),
+                        writeValue <| t  <| Expression.Property(valueExpr, "Value") |> bval,
                         Expression.Constant(BsonNull.Value, typeof<BsonValue>)
                     )
                 
@@ -165,7 +178,7 @@ module ExpressionWriter =
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition()
                       -> writeOption(t) valueExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
-                      -> writeOption(t) valueExpr
+                      -> writeVOption(t) valueExpr
                 | t when t.IsArray
                       -> writeArray(t) valueExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Dictionary<_,_>>.GetGenericTypeDefinition()
@@ -176,9 +189,9 @@ module ExpressionWriter =
                              [vobj],
                              Expression.Assign(vobj, valueExpr),
                              Expression.Condition(
-                                    Expression.Equal(vobj, Expression.Constant(null)),
+                                    Expression.Equal(vobj, Expression.Constant(null, t)),
                                     Expression.Constant(BsonNull.Value, typeof<BsonValue>),
-                                    build(t, vobj)
+                                    Expression.Convert(build(t, vobj), typeof<BsonValue>)
                                  )
                          )
                          
@@ -188,18 +201,22 @@ module ExpressionWriter =
             Expression.Not(Expression.Equal(valueExr, getDefaultValue(pr)))
             
         let writeIfNotNoneCheck (pr: PropertyInfo) (valueExr: Expression) : Expression =
+            Expression.Call(null, pr.PropertyType.GetMethod("get_IsSome", [|pr.PropertyType|]), valueExr)
+
+        let writeIfNotValueNoneCheck (_: PropertyInfo) (valueExr: Expression) : Expression =
             Expression.Property(valueExr, "IsSome")
-            
+                            
         let getChecker(pr: PropertyInfo) =                 
             
             let attr = pr.GetCustomAttribute<BsonIgnoreIfDefaultAttribute>()
             let t = pr.PropertyType
             
-            if(attr <> null) then Some writeIfNotDefCheck
-            else if 
-                    t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition() ||
-                    t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
-                then Some writeIfNotNoneCheck
+            if(attr <> null)
+                then Some writeIfNotDefCheck
+            else if  t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition()
+                then Some writeIfNotNoneCheck 
+            else if  t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
+                then Some writeIfNotValueNoneCheck
             else None
         
         let addMethod = typeof<BsonDocument>.GetMethod("Add", [| typeof<string>; typeof<BsonValue> |])
@@ -226,3 +243,4 @@ module ExpressionWriter =
             
         steps.Add(_v_res)
         Expression.Block([_v_res], steps)
+
