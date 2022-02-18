@@ -5,6 +5,7 @@ open Iezious.Libs.BSONExpressionSerializer
 open MongoDB.Bson
 open NUnit.Framework
 open FluentAssertions
+open NUnit.Framework.Internal.Commands
 
 [<TestFixture>]
 module WriterExecutionTests =
@@ -233,4 +234,60 @@ module WriterExecutionTests =
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
         test["Count"].AsInt64.Should().Be(data.Count, "") |> ignore
         test.Contains("OptString").Should().Be(false, "") |> ignore
+
+
+    [<Test>]
+    let ``Test write of long value option filled``() =
+        let data = {
+            TestFlatClassWithVOptionLong.Name = "qwqdqsqddq"
+            TestFlatClassWithVOptionLong.CountOpt = ValueSome 33 
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestFlatClassWithVOptionLong>()
+        let test =  convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test["CountOpt"].AsInt64.Should().Be(data.CountOpt.Value, "") |> ignore
+
+    [<Test>]
+    let ``Test write of long value option None``() =
+        let data = {
+            TestFlatClassWithVOptionLong.Name = "qwqdqsqddq"
+            TestFlatClassWithVOptionLong.CountOpt = ValueNone 
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestFlatClassWithVOptionLong>()
+        let test =  convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test.Contains("CountOpt").Should().Be(false, "") |> ignore
+
+    [<Test>]
+    let ``Test write of datetime value option filled``() =
+        let data = {
+            TestFlatClassWithVOptionDate.Name = "qwqdqsqddq"
+            TestFlatClassWithVOptionDate.Count = 23123
+            TestFlatClassWithVOptionDate.OptDate = ValueSome DateTime.UtcNow 
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestFlatClassWithVOptionDate>()
+        let test =  convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test["OptDate"].ToUniversalTime().Should().BeCloseTo(data.OptDate.Value, TimeSpan.FromMilliseconds(1), "") |> ignore
+
+    [<Test>]
+    let ``Test write of datetime value option None``() =
+        let data = {
+            TestFlatClassWithVOptionDate.Name = "qwqdqsqddq"
+            TestFlatClassWithVOptionDate.Count = 23123
+            TestFlatClassWithVOptionDate.OptDate = ValueNone 
+
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestFlatClassWithVOptionDate>()
+        let test =  convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test.Contains("OptDate").Should().Be(false, "") |> ignore
 
