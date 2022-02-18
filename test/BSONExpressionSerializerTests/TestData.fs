@@ -90,7 +90,7 @@ type TestFlatClassWithVOptionLong = {
 
 [<CLIMutable>]
 type TestClassWithSubObject = {
-    _id: BsonObjectId
+    _id: ObjectId
     Name: string
     Count: int64
     SubObject: TestFlatClass
@@ -98,7 +98,7 @@ type TestClassWithSubObject = {
 
 [<CLIMutable>]
 type TestClassWithSubObjectOption = {
-    _id: BsonObjectId
+    _id: ObjectId
     Name: string
     Count: int64
     SubObjectOption: TestFlatClass option
@@ -106,7 +106,7 @@ type TestClassWithSubObjectOption = {
 
 [<CLIMutable>]
 type TestFlatClassWithArrayOfObjects = {
-    _id: BsonObjectId
+    _id: ObjectId
     Name: string
     Count: int64
     SubArray: TestFlatClass[]

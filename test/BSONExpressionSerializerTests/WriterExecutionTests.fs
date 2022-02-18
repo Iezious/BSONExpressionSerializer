@@ -291,3 +291,62 @@ module WriterExecutionTests =
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
         test.Contains("OptDate").Should().Be(false, "") |> ignore
 
+
+    [<Test>]
+    let ``Test write of nested class``() =
+        let data = {
+            TestClassWithSubObject._id = ObjectId.GenerateNewId()
+            TestClassWithSubObject.Name = "qwqdqsqddq"
+            TestClassWithSubObject.Count = 23123
+            TestClassWithSubObject.SubObject = {
+                TestFlatClass.Name = "oiwdqwjdoipqwd"
+                TestFlatClass.Count = 2131
+                TestFlatClass.Date = DateTime.UtcNow
+            } 
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithSubObject>()
+        let test = convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test["Count"].AsInt64.Should().Be(data.Count, "") |> ignore
+        test["SubObject"].AsBsonDocument["Name"].AsString.Should().Be(data.SubObject.Name, "") |> ignore
+        test["SubObject"].AsBsonDocument["Count"].AsInt32.Should().Be(data.SubObject.Count, "") |> ignore
+
+
+    [<Test>]
+    let ``Test write of nested class option filled``() =
+        let data = {
+            TestClassWithSubObjectOption._id = ObjectId.GenerateNewId()
+            TestClassWithSubObjectOption.Name = "qwqdqsqddq"
+            TestClassWithSubObjectOption.Count = 23123
+            TestClassWithSubObjectOption.SubObjectOption = Some {
+                TestFlatClass.Name = "oiwdqwjdoipqwd"
+                TestFlatClass.Count = 2131
+                TestFlatClass.Date = DateTime.UtcNow
+            } 
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithSubObjectOption>()
+        let test = convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test["Count"].AsInt64.Should().Be(data.Count, "") |> ignore
+        test["SubObjectOption"].AsBsonDocument["Name"].AsString.Should().Be(data.SubObjectOption.Value.Name, "") |> ignore
+        test["SubObjectOption"].AsBsonDocument["Count"].AsInt32.Should().Be(data.SubObjectOption.Value.Count, "") |> ignore
+
+
+    [<Test>]
+    let ``Test write of nested class option none``() =
+        let data = {
+            TestClassWithSubObjectOption._id = ObjectId.GenerateNewId()
+            TestClassWithSubObjectOption.Name = "qwqdqsqddq"
+            TestClassWithSubObjectOption.Count = 23123
+            TestClassWithSubObjectOption.SubObjectOption = None
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithSubObjectOption>()
+        let test = convert.Invoke(data)
+        
+        test.Contains("SubObject").Should().Be(false, "") |> ignore
+
