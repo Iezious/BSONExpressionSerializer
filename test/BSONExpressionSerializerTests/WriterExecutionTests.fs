@@ -548,3 +548,20 @@ module WriterExecutionTests =
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
         test["Payload"].AsBsonDocument["SomeKey"].AsInt32.Should().Be(11, "") |> ignore
         test["Payload"].AsBsonDocument["OtherKey"].AsString.Should().Be("ddqwqd", "") |> ignore
+        
+        
+
+    [<Test>]
+    let ``Test write of object with bson document and ignored null``() =
+        let data = { 
+                      TestClassWithBsonDocumentWithDefault.Name = "11"
+                      TestClassWithBsonDocumentWithDefault.Payload = null
+                   }
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithBsonDocumentWithDefault>()
+        let test = convert.Invoke(data)
+        
+        test["Name"].AsString.Should().Be(data.Name, "") |> ignore
+        test.Contains("Payload").Should().Be(false, "") |> ignore
+        
+        

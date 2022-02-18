@@ -56,6 +56,17 @@ module ExpressionWriter =
                 | _ -> Expression.Convert(valueExpr, typeof<int32>)
                 |> bval
                 
+
+            let writeBsonDocument (t: Type) (valueExpr: Expression) : Expression =
+                let m = t.GetMethod(nameof(Unchecked.defaultof<BsonDocument>.DeepClone), [||])
+                //let docExpr = Expression.Property(valueExpr, nameof(Unchecked.defaultof<BsonValue>.AsBsonDocument))
+                Expression.Condition(
+                        Expression.NotEqual(valueExpr, Expression.Constant(null, t)),
+                        Expression.Property(Expression.Call(valueExpr, m), nameof(Unchecked.defaultof<BsonValue>.AsBsonDocument)) |> bval,
+                        Expression.Constant(BsonNull.Value, typeof<BsonValue>)
+                    )
+                                        
+                
             let rec writeOption(t: Type) (valueExpr: Expression) : Expression =
                 let argt = t.GenericTypeArguments[0]
                 let method = t.GetMethod("get_IsNone", [|t|]);
@@ -182,7 +193,10 @@ module ExpressionWriter =
                 | t when t = typeof<DateTime> -> Expression.Convert(valueExpr, typeof<BsonDateTime>)
                 | t when t = typeof<BsonObjectId> -> Expression.Convert(valueExpr, typeof<BsonObjectId>) 
                 | t when t = typeof<ObjectId> -> Expression.Convert(valueExpr, typeof<BsonObjectId>)
-                | t when t.IsEnum -> writeEnum(t) valueExpr
+                | t when t = typeof<BsonDocument>
+                      -> nullSafe writeBsonDocument (t) valueExpr
+                | t when t.IsEnum
+                      -> writeEnum (t) valueExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition()
                       -> writeOption(t) valueExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Nullable<_>>.GetGenericTypeDefinition()
