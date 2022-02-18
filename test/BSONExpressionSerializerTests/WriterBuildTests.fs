@@ -29,6 +29,7 @@ module WriterBuildTests =
     [<TestCase(typeof<TestClassWithLongDictionary>)>]
     [<TestCase(typeof<TestClassWithSubClassDictionary>)>]
     [<TestCase(typeof<TestClassWithNullable>)>]
+    [<TestCase(typeof<TestClassWithBsonDocument>)>]
     let ``Test that we don't fail on writer lambda build``(t: Type) =
         let param = Expression.Parameter(t)
         let expr = ExpressionWriter.build(t, param)

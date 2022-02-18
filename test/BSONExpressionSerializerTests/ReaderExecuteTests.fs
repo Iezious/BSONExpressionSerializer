@@ -308,4 +308,18 @@ module ReaderExecuteTests =
         
         test.Name.Should().Be("zz", "") |> ignore
         test.Count.Should().Be(data.Count, "") |> ignore
+                
+            
+    [<Test>]
+    let ``Test read of object with bson document``() =
+        let data = {| 
+                      Name = 11
+                      Payload = !-> {| SomeKey = 11; OtherKey = "ddqwqd" |}
+                   |}
+        let convert = ExpressionReader.CreateReader<TestClassWithBsonDocument>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be("zz", "") |> ignore
+        test.Payload["SomeKey"].AsInt32.Should().Be(11, "") |> ignore
+        test.Payload["OtherKey"].AsString.Should().Be("ddqwqd", "") |> ignore
         

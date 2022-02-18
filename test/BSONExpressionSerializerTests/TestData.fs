@@ -190,3 +190,9 @@ type TestClassWithSubClassDictionary = {
     Dict: Dictionary<string, TestFlatClass> 
 }
     
+[<CLIMutable>]
+type TestClassWithBsonDocument = {
+    Name: string
+    Payload: BsonDocument 
+}
+    
