@@ -166,17 +166,14 @@ module ExpressionWriter =
                 | t when t = typeof<float> -> Expression.Convert(valueExpr, typeof<BsonValue>)
                 | t when t = typeof<Decimal> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
                 | t when t = typeof<Decimal128> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
-                | t when t = typeof<Nullable<Int32>> -> writeNullable t valueExpr 
-                | t when t = typeof<Nullable<Int64>> -> writeNullable t valueExpr 
-                | t when t = typeof<Nullable<decimal>> -> writeNullable t valueExpr 
-                | t when t = typeof<Nullable<Guid>> -> writeNullable t valueExpr 
-                | t when t = typeof<Nullable<float>> -> writeNullable t valueExpr 
                 | t when t = typeof<DateTime> -> Expression.Convert(valueExpr, typeof<BsonDateTime>)
                 | t when t = typeof<BsonObjectId> -> Expression.Convert(valueExpr, typeof<BsonObjectId>) 
                 | t when t = typeof<ObjectId> -> Expression.Convert(valueExpr, typeof<BsonObjectId>)
                 | t when t.IsEnum -> writeEnum(t) valueExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition()
                       -> writeOption(t) valueExpr
+                | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Nullable<_>>.GetGenericTypeDefinition()
+                      -> writeNullable(t) valueExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
                       -> writeVOption(t) valueExpr
                 | t when t.IsArray
