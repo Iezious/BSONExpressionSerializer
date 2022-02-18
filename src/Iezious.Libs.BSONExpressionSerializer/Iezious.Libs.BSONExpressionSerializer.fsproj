@@ -5,7 +5,7 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <AssemblyName>Iezious.Libs.BSONExpressionSerializer</AssemblyName>
         <RootNamespace>Iezious.Libs.BSONExpressionSerializer</RootNamespace>
-        <PackageVersion>1.0.1</PackageVersion>
+        <PackageVersion>1.0.2</PackageVersion>
         <RepositoryUrl>https://github.com/Iezious/BSONExpressionSerializer</RepositoryUrl>
     </PropertyGroup>
 
