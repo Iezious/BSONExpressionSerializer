@@ -33,7 +33,7 @@ module ExpressionWriter =
             -> true
         | _, t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
             -> true
-        | attr, t when attr <> null
+        | attr, _ when attr <> null
             -> true
         | _ -> false
     
@@ -41,7 +41,7 @@ module ExpressionWriter =
         
         let rec buildValue(pr: PropertyInfo) (propValue: Expression) : Expression =
             
-            let writeEnum(t: Type) (valueExpr: Expression) : Expression =
+            let writeEnum(_: Type) (valueExpr: Expression) : Expression =
                 match pr.GetCustomAttribute<BsonRepresentationAttribute>() with
                 | null
                      -> Expression.Convert(valueExpr, typeof<int32>) :> Expression
@@ -207,6 +207,14 @@ module ExpressionWriter =
                          
             writeValue pr.PropertyType propValue
                 
+        let writeIfNotNullAndNotDefCheck (pr: PropertyInfo) (valueExr: Expression) : Expression =
+            Expression.And(
+                Expression.NotEqual(valueExr, Expression.Constant(null, pr.PropertyType)), 
+                Expression.Not(Expression.Equal(valueExr, getDefaultValue(pr))))
+            
+        let writeIfNotNullCheck (pr: PropertyInfo) (valueExr: Expression) : Expression =
+            Expression.NotEqual(valueExr, Expression.Constant(null, pr.PropertyType))
+            
         let writeIfNotDefCheck (pr: PropertyInfo) (valueExr: Expression) : Expression =
             Expression.Not(Expression.Equal(valueExr, getDefaultValue(pr)))
             
@@ -217,11 +225,15 @@ module ExpressionWriter =
             Expression.Property(valueExr, "IsSome")
                             
         let getChecker(pr: PropertyInfo) =                 
-            
-            let attr = pr.GetCustomAttribute<BsonIgnoreIfDefaultAttribute>()
+            let attrd = pr.GetCustomAttribute<BsonIgnoreIfDefaultAttribute>()
+            let attrn = pr.GetCustomAttribute<BsonIgnoreIfNullAttribute>()
             let t = pr.PropertyType
             
-            if(attr <> null)
+            if(attrn <> null && attrd <> null)
+                then Some writeIfNotNullAndNotDefCheck
+            else if(attrn <> null)
+                then Some writeIfNotNullCheck
+            else if(attrd <> null)
                 then Some writeIfNotDefCheck
             else if  t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition()
                 then Some writeIfNotNoneCheck 

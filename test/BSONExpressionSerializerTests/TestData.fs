@@ -33,6 +33,20 @@ type TestFlatWithDefaultValuesClass = {
 }
 
 [<CLIMutable>]
+type TestFlatWithDefaultNull = {
+    [<BsonIgnoreIfNull>]
+    Name: string
+    Count: int32
+}
+
+[<CLIMutable>]
+type TestFlatWithDefaultAndNull = {
+    [<BsonIgnoreIfNull; BsonIgnoreIfDefault; BsonDefaultValue("zz")>]
+    Name: string
+    Count: int32
+}
+
+[<CLIMutable>]
 type TestFlatClassWithObjectID = {
     _id: ObjectId
     Name: string

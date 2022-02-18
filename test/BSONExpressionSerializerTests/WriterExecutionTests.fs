@@ -61,7 +61,46 @@ module WriterExecutionTests =
         
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
         test.Contains("Count").Should().Be(false, "") |> ignore  
-        test.Contains("Is").Should().Be(false, "") |> ignore
+        test.Contains("Is").Should().Be(false, "") |> ignore    
+        
+    [<Test>]
+    let ``Test ignore null values by attribute``() =
+        let data = {
+            TestFlatWithDefaultNull.Name = null 
+            TestFlatWithDefaultNull.Count = 2 
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestFlatWithDefaultNull>()
+        let test =  convert.Invoke(data)
+        
+        test["Count"].AsInt32.Should().Be(data.Count, "") |> ignore
+        test.Contains("Name").Should().Be(false, "") |> ignore          
+    
+    [<Test>]
+    let ``Test ignore null values by both attributes``() =
+        let data = {
+            TestFlatWithDefaultAndNull.Name = null 
+            TestFlatWithDefaultAndNull.Count = 2 
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestFlatWithDefaultAndNull>()
+        let test =  convert.Invoke(data)
+        
+        test["Count"].AsInt32.Should().Be(data.Count, "") |> ignore
+        test.Contains("Name").Should().Be(false, "") |> ignore  
+        
+    [<Test>]
+    let ``Test ignore null values by both attributes and set to default``() =
+        let data = {
+            TestFlatWithDefaultAndNull.Name = "zz" 
+            TestFlatWithDefaultAndNull.Count = 2 
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestFlatWithDefaultAndNull>()
+        let test =  convert.Invoke(data)
+        
+        test["Count"].AsInt32.Should().Be(data.Count, "") |> ignore
+        test.Contains("Name").Should().Be(false, "") |> ignore  
     
     [<Test>]
     let ``Test not ignore default values if values are not default``() =
