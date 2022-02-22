@@ -1,6 +1,7 @@
 namespace BSONExpressionSerializerTests
 
 open System
+open BSONExpressionSerializerTests
 open Iezious.Libs.BSONExpressionSerializer
 open NUnit.Framework
 open NUnit.Framework.Internal.Commands
@@ -188,6 +189,25 @@ module ReaderExecuteTests =
         
         test.Name.Should().Be(data.Name, "") |> ignore
         test.EnumData.ToString().Should().Be(data.EnumData, "") |> ignore
+                
+    [<Test>]
+    let ``Test read of enum as string option set``() =
+        let data = {| Name = "Tssa"; EnumData = "OptionB" |}
+        let convert = ExpressionReader.CreateReader<TestClassWithEnumStringOption>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.EnumData.IsSome.Should().Be(true, "") |> ignore
+        test.EnumData.ToString().Should().Be(data.EnumData, "") |> ignore
+        
+    [<Test>]
+    let ``Test read of enum as string option none``() =
+        let data = {| Name = "Tssa";|}
+        let convert = ExpressionReader.CreateReader<TestClassWithEnumStringOption>()
+        let test =  convert.Invoke(!-> data) 
+        
+        test.Name.Should().Be(data.Name, "") |> ignore
+        test.EnumData.IsSome.Should().Be(false, "") |> ignore
         
                 
     [<Test>]
