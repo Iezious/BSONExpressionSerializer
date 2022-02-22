@@ -537,6 +537,35 @@ module WriterExecutionTests =
 
 
     [<Test>]
+    let ``Test write of string enum voption set``() =
+        let data = {
+            TestClassWithEnumStringOption._id = ObjectId.GenerateNewId() |> BsonObjectId
+            TestClassWithEnumStringOption.Name = "wqdijqwoijdqodwq"
+            TestClassWithEnumStringOption.Count = 2323131231L
+            TestClassWithEnumStringOption.EnumData = ValueSome TestEnum.OptionB
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithEnumStringOption>()
+        let test = convert.Invoke(data)
+        
+        test["EnumData"].AsString.Should().Be(data.EnumData.Value |> string, "") |> ignore
+
+    [<Test>]
+    let ``Test write of string enum voption none``() =
+        let data = {
+            TestClassWithEnumStringOption._id = ObjectId.GenerateNewId() |> BsonObjectId
+            TestClassWithEnumStringOption.Name = "wqdijqwoijdqodwq"
+            TestClassWithEnumStringOption.Count = 2323131231L
+            TestClassWithEnumStringOption.EnumData = ValueNone
+        }        
+        
+        let convert = ExpressionWriter.CreateWriter<TestClassWithEnumStringOption>()
+        let test = convert.Invoke(data)
+        
+        test.Contains("EnumData").Should().Be(false, "") |> ignore
+
+
+    [<Test>]
     let ``Test write of object with bson document``() =
         let data = { 
                       TestClassWithBsonDocument.Name = "11"

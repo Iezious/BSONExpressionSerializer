@@ -41,7 +41,7 @@ module ExpressionWriter =
         
         let rec buildValue(pr: PropertyInfo) (propValue: Expression) : Expression =
             
-            let writeEnum(_: Type) (valueExpr: Expression) : Expression =
+            let writeEnum(t: Type) (valueExpr: Expression) : Expression =
                 match pr.GetCustomAttribute<BsonRepresentationAttribute>() with
                 | null
                      -> Expression.Convert(valueExpr, typeof<int32>) :> Expression
@@ -51,7 +51,7 @@ module ExpressionWriter =
                      -> Expression.Convert(Expression.Convert(valueExpr, typeof<int32>), typeof<int64>)
                 | attr when attr.Representation = BsonType.String
                      -> 
-                        let toStringMethod = pr.PropertyType.GetMethod("ToString", [||])
+                        let toStringMethod = t.GetMethod("ToString", [||])
                         Expression.Call(valueExpr, toStringMethod)
                 | _ -> Expression.Convert(valueExpr, typeof<int32>)
                 |> bval
@@ -195,14 +195,14 @@ module ExpressionWriter =
                 | t when t = typeof<ObjectId> -> Expression.Convert(valueExpr, typeof<BsonObjectId>)
                 | t when t = typeof<BsonDocument>
                       -> nullSafe writeBsonDocument (t) valueExpr
-                | t when t.IsEnum
-                      -> writeEnum (t) valueExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition()
                       -> writeOption(t) valueExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Nullable<_>>.GetGenericTypeDefinition()
                       -> writeNullable(t) valueExpr
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition()
                       -> writeVOption(t) valueExpr
+                | t when t.IsEnum
+                      -> writeEnum (t) valueExpr
                 | t when t.IsArray
                       -> nullSafe writeArray t valueExpr 
                 | t when t.IsGenericType && t.GetGenericTypeDefinition() = typeof<Dictionary<_,_>>.GetGenericTypeDefinition()

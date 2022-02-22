@@ -148,6 +148,15 @@ type TestClassWithEnumString = {
     EnumData: TestEnum
 }
     
+[<CLIMutable>]
+type TestClassWithEnumStringOption = {
+    _id: BsonObjectId
+    Name: string
+    Count: int64
+    [<BsonRepresentation(BsonType.String)>]
+    EnumData: TestEnum voption
+}
+    
     
 
 [<CLIMutable>]
