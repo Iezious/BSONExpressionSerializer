@@ -216,7 +216,7 @@ module ExpressionReader =
         let steps = List<Expression>()
         steps.Add(Expression.Assign(_v_res, Expression.New(objType)))
         
-        for pr in (objType.GetProperties() |> Seq.where(fun p -> p.GetCustomAttribute<BsonIgnoreAttribute>() = null)) do
+        for pr in (objType.GetProperties(BindingFlags.Instance + BindingFlags.Public) |> Seq.where(fun p -> p.GetCustomAttribute<BsonIgnoreAttribute>() = null)) do
             let name = getNameInBson pr |> Expression.Constant
             let propReader = propConverter <| pr <| Expression.Property(_v_doc, "Item", name)
             Expression.IfThenElse(

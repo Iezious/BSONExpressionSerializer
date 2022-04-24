@@ -219,4 +219,8 @@ type TestClassBinaryData = {
     Payload: byte[] 
 }
     
-    
+[<CLIMutable>]
+type TestClassWithStaticProperty = {
+    Name: string
+    Count: int32
+} with static member Projection = {| One=true; Second = true |}    
