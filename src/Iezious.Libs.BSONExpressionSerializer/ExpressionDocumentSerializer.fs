@@ -7,6 +7,8 @@ open MongoDB.Bson.Serialization.Serializers
 
 type ExpressionDocumentSerializer<'t>() =
     
+//    inherit BsonDocumentSerializer()
+    
     let reader = ExpressionReader.CreateReader<'t>().Invoke
     let writer = ExpressionWriter.CreateWriter<'t>().Invoke
     
@@ -24,7 +26,6 @@ type ExpressionDocumentSerializer<'t>() =
         member _.Deserialize(context: BsonDeserializationContext, args: BsonDeserializationArgs) : 't =
             deserialize(context, args)
 
-
         member _.Serialize(context:BsonSerializationContext, args:BsonSerializationArgs, value:'t) =
             serialize(context, args, value)
             
@@ -36,3 +37,9 @@ type ExpressionDocumentSerializer<'t>() =
         member this.Serialize(context: BsonSerializationContext, args: BsonSerializationArgs, value: obj): unit =
             serialize(context, args, value :?> 't)
         member this.ValueType = typeof<'t>
+        
+    interface IBsonDocumentSerializer with
+        member this.TryGetMemberSerializationInfo(memberName, serializationInfo) =
+            serializationInfo <- BsonSerializationInfo(memberName, BsonValueSerializer.Instance, typeof<BsonValue>);
+            true
+        

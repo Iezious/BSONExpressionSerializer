@@ -402,5 +402,17 @@ module ReaderExecuteTests =
         test.Name.Should().Be(data.Name, "") |> ignore
         test.Payload.Should().BeEquivalentTo(data.Payload, "") |> ignore
         
+    [<Test>]        
+    let ``Test that empty string in enum value set it to None``() =
+        let data = {| 
+                        _id = ObjectId()
+                        Name = "wqqewqqwe"
+                        Count = 12
+//                        EnumData = ""
+                   |}
+
+        let convert = ExpressionReader.CreateReader<TestClassWithEnumStringOption>()
+        let test =  convert.Invoke(!-> data)
+        test.EnumData.IsNone.Should().BeTrue("") |> ignore
         
         
