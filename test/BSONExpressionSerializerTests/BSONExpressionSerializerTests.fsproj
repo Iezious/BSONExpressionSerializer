@@ -13,13 +13,15 @@
         <Compile Include="ReaderExecuteTests.fs" />
         <Compile Include="WriterBuildTests.fs" />
         <Compile Include="WriterExecutionTests.fs" />
+        <Compile Include="MongoExpressionBuilderTests.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="FluentAssertions" Version="6.6.0" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
-        <PackageReference Include="MongoDB.Bson" Version="2.15.0" />
+        <PackageReference Include="MongoDB.Bson" Version="2.19.2" />
+        <PackageReference Include="MongoDB.Driver" Version="2.19.2" />
         <PackageReference Include="NUnit" Version="3.13.3" />
         <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
         <PackageReference Include="coverlet.collector" Version="3.1.2">

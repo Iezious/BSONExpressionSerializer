@@ -8,7 +8,7 @@ open MongoDB.Bson.Serialization.Attributes
 [<CLIMutable>]
 type TestFlatClass = {
     Name: string
-    Count: int32
+    CountInt: int32
     Date: System.DateTime
 }
 
@@ -156,8 +156,6 @@ type TestClassWithEnumStringOption = {
     [<BsonRepresentation(BsonType.String)>]
     EnumData: TestEnum voption
 }
-    
-    
 
 [<CLIMutable>]
 type TestClassWithStringDictionary = {

@@ -9,7 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="MongoDB.Bson" Version="2.15.0" />
+      <PackageReference Include="MongoDB.Bson" Version="2.19.2" />
       <PackageReference Update="FSharp.Core" Version="6.0.3" />
     </ItemGroup>
 
@@ -19,6 +19,7 @@
       <Compile Include="ExpressionReader.fs" />
       <Compile Include="ExpressionWriter.fs" />
       <Compile Include="ExpressionStreamReader.fs" />
+      <Compile Include="HelperSerializers.fs" />
       <Compile Include="ExpressionDocumentSerializer.fs" />
     </ItemGroup>
 

@@ -14,11 +14,11 @@ module ReaderExecuteTests =
     
     [<Test>]
     let ``Test read flat class``() =
-        let data = {| Name = "Tssa"; Count = -1; Date = DateTime.UtcNow  |}
+        let data = {| Name = "Tssa"; CountInt = -1; Date = DateTime.UtcNow  |}
         let convert = ExpressionReader.CreateReader<TestFlatClass>()
         let test =  convert.Invoke(!-> data) 
         
-        test.Count.Should().Be(data.Count, "") |> ignore  
+        test.CountInt.Should().Be(data.CountInt, "") |> ignore  
         test.Name.Should().Be(data.Name, "") |> ignore
         test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore
         
@@ -53,7 +53,7 @@ module ReaderExecuteTests =
         let convert = ExpressionReader.CreateReader<TestFlatClass>()
         let test =  convert.Invoke(!-> data) 
         
-        test.Count.Should().Be(0, "") |> ignore  
+        test.CountInt.Should().Be(0, "") |> ignore  
         test.Name.Should().Be(data.Name, "") |> ignore
         test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore
         
@@ -124,14 +124,14 @@ module ReaderExecuteTests =
 
     [<Test>]
     let ``Test read of TestClassWithSubObject``() =
-        let data = {| Name = "Tssa"; SubObject = {| Name ="dqwdqw"; Count = 22  |}  |}
+        let data = {| Name = "Tssa"; SubObject = {| Name ="dqwdqw"; CountInt = 22  |}  |}
         let convert = ExpressionReader.CreateReader<TestClassWithSubObject>()
         let test =  convert.Invoke(!-> data) 
         
         test.Name.Should().Be(data.Name, "") |> ignore
         test.SubObject.Should().NotBeNull("") |> ignore
         test.SubObject.Name.Should().Be(data.SubObject.Name, "") |> ignore
-        test.SubObject.Count.Should().Be(data.SubObject.Count, "") |> ignore
+        test.SubObject.CountInt.Should().Be(data.SubObject.CountInt, "") |> ignore
         
     [<Test>]
     let ``Test read of TestClassWithSubObject not set``() =
@@ -153,14 +153,14 @@ module ReaderExecuteTests =
     
     [<Test>]
     let ``Test read of TestClassWithSubObject option full``() =
-        let data = {| Name = "Tssa"; SubObjectOption = {| Name ="dqwdqw"; Count = 22  |}  |}
+        let data = {| Name = "Tssa"; SubObjectOption = {| Name ="dqwdqw"; CountInt = 22  |}  |}
         let convert = ExpressionReader.CreateReader<TestClassWithSubObjectOption>()
         let test =  convert.Invoke(!-> data) 
         
         test.Name.Should().Be(data.Name, "") |> ignore
         test.SubObjectOption.IsSome.Should().Be(true, "") |> ignore
         test.SubObjectOption.Value.Name.Should().Be(data.SubObjectOption.Name, "") |> ignore
-        test.SubObjectOption.Value.Count.Should().Be(data.SubObjectOption.Count, "") |> ignore
+        test.SubObjectOption.Value.CountInt.Should().Be(data.SubObjectOption.CountInt, "") |> ignore
 
                     
     [<Test>]
@@ -214,8 +214,8 @@ module ReaderExecuteTests =
     let ``Test read of array of objects``() =
         let data = {| Name = "Tssa"
                       SubArray = [|
-                          {| Name = "wdqwqdqdw"; Count = -1 |}
-                          {| Name = "qwdqdwq"; Count = 33 |}
+                          {| Name = "wdqwqdqdw"; CountInt = -1 |}
+                          {| Name = "qwdqdwq"; CountInt = 33 |}
                       |]
                    |}
         let convert = ExpressionReader.CreateReader<TestFlatClassWithArrayOfObjects>()
@@ -224,9 +224,9 @@ module ReaderExecuteTests =
         test.Name.Should().Be(data.Name, "") |> ignore
         test.SubArray.Length.Should().Be(data.SubArray.Length, "") |> ignore
         test.SubArray[0].Name.Should().Be(data.SubArray[0].Name, "")  |> ignore
-        test.SubArray[0].Count.Should().Be(data.SubArray[0].Count, "")  |> ignore
+        test.SubArray[0].CountInt.Should().Be(data.SubArray[0].CountInt, "")  |> ignore
         test.SubArray[1].Name.Should().Be(data.SubArray[1].Name, "")  |> ignore
-        test.SubArray[1].Count.Should().Be(data.SubArray[1].Count, "")  |> ignore                
+        test.SubArray[1].CountInt.Should().Be(data.SubArray[1].CountInt, "")  |> ignore                
     [<Test>]
     let ``Test read of array set to null``() =
         let data = {| Name = "Tssa"
@@ -279,7 +279,7 @@ module ReaderExecuteTests =
     [<Test>]
     let ``Test read of object dictionary``() =
         let data = {| Name = "Tssa"
-                      Dict = {| KeyA = {| Name = "wdq" |}; KeyB = {| Count = 12313 |} |}
+                      Dict = {| KeyA = {| Name = "wdq" |}; KeyB = {| CountInt = 12313 |} |}
                    |}
         let convert = ExpressionReader.CreateReader<TestClassWithSubClassDictionary>()
         let test =  convert.Invoke(!-> data) 
@@ -287,7 +287,7 @@ module ReaderExecuteTests =
         test.Name.Should().Be(data.Name, "") |> ignore
         test.Dict.Count.Should().Be(2, "") |> ignore
         test.Dict["KeyA"].Name.Should().Be(data.Dict.KeyA.Name, "") |> ignore        
-        test.Dict["KeyB"].Count.Should().Be(data.Dict.KeyB.Count, "") |> ignore        
+        test.Dict["KeyB"].CountInt.Should().Be(data.Dict.KeyB.CountInt, "") |> ignore        
             
     [<Test>]
     let ``Test read of object with nullable null and empty``() =

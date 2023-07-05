@@ -17,13 +17,13 @@ module WriterExecutionTests =
     let ``Test write flat class``() =
         let data = {
             TestFlatClass.Name = "Tssa" 
-            TestFlatClass.Count = -1 
+            TestFlatClass.CountInt = -1 
             TestFlatClass.Date = DateTime.UtcNow
         }
         let convert = ExpressionWriter.CreateWriter<TestFlatClass>()
         let test =  convert.Invoke(data) 
         
-        test["Count"].AsInt32.Should().Be(data.Count, "") |> ignore  
+        test["CountInt"].AsInt32.Should().Be(data.CountInt, "") |> ignore  
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
         test["Date"].ToUniversalTime().Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore
 
@@ -140,7 +140,7 @@ module WriterExecutionTests =
     let ``Test not ignore string values in no ignore default attribute``() =
         let data = {
             TestFlatClass.Name = null
-            TestFlatClass.Count = 1 
+            TestFlatClass.CountInt = 1 
             TestFlatClass.Date = DateTime.MinValue
         }        
         
@@ -342,7 +342,7 @@ module WriterExecutionTests =
             TestClassWithSubObject.Count = 23123
             TestClassWithSubObject.SubObject = {
                 TestFlatClass.Name = "oiwdqwjdoipqwd"
-                TestFlatClass.Count = 2131
+                TestFlatClass.CountInt = 2131
                 TestFlatClass.Date = DateTime.UtcNow
             } 
         }        
@@ -353,7 +353,7 @@ module WriterExecutionTests =
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
         test["Count"].AsInt64.Should().Be(data.Count, "") |> ignore
         test["SubObject"].AsBsonDocument["Name"].AsString.Should().Be(data.SubObject.Name, "") |> ignore
-        test["SubObject"].AsBsonDocument["Count"].AsInt32.Should().Be(data.SubObject.Count, "") |> ignore
+        test["SubObject"].AsBsonDocument["CountInt"].AsInt32.Should().Be(data.SubObject.CountInt, "") |> ignore
 
 
     [<Test>]
@@ -364,7 +364,7 @@ module WriterExecutionTests =
             TestClassWithSubObjectOption.Count = 23123
             TestClassWithSubObjectOption.SubObjectOption = Some {
                 TestFlatClass.Name = "oiwdqwjdoipqwd"
-                TestFlatClass.Count = 2131
+                TestFlatClass.CountInt = 2131
                 TestFlatClass.Date = DateTime.UtcNow
             } 
         }        
@@ -375,7 +375,7 @@ module WriterExecutionTests =
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
         test["Count"].AsInt64.Should().Be(data.Count, "") |> ignore
         test["SubObjectOption"].AsBsonDocument["Name"].AsString.Should().Be(data.SubObjectOption.Value.Name, "") |> ignore
-        test["SubObjectOption"].AsBsonDocument["Count"].AsInt32.Should().Be(data.SubObjectOption.Value.Count, "") |> ignore
+        test["SubObjectOption"].AsBsonDocument["CountInt"].AsInt32.Should().Be(data.SubObjectOption.Value.CountInt, "") |> ignore
 
 
     [<Test>]
@@ -400,9 +400,9 @@ module WriterExecutionTests =
             TestFlatClassWithArrayOfObjects.Name = "qwqdqsqddq"
             TestFlatClassWithArrayOfObjects.Count = 23123
             TestFlatClassWithArrayOfObjects.SubArray = [|
-                { Name = "oiwdqwjdoipqwd";  Count = 2131; Date = DateTime.UtcNow } 
-                { Name = "qwdkliqjpdowj";  Count = 2131221; Date = DateTime.UtcNow.AddHours(2) } 
-                { Name = "poqwpoqwdpod";  Count = 22; Date = DateTime.UtcNow.AddHours(32) } 
+                { Name = "oiwdqwjdoipqwd";  CountInt = 2131; Date = DateTime.UtcNow } 
+                { Name = "qwdkliqjpdowj";  CountInt = 2131221; Date = DateTime.UtcNow.AddHours(2) } 
+                { Name = "poqwpoqwdpod";  CountInt = 22; Date = DateTime.UtcNow.AddHours(32) } 
             |]
         }        
         
@@ -413,7 +413,7 @@ module WriterExecutionTests =
         test["SubArray"].AsBsonArray.Count.Should().Be(data.SubArray.Length, "") |> ignore
         for i in 0..data.SubArray.Length-1 do
             test["SubArray"].AsBsonArray[i].AsBsonDocument["Name"].AsString.Should().Be(data.SubArray[i].Name, "") |> ignore
-            test["SubArray"].AsBsonArray[i].AsBsonDocument["Count"].AsInt32.Should().Be(data.SubArray[i].Count, "") |> ignore
+            test["SubArray"].AsBsonArray[i].AsBsonDocument["CountInt"].AsInt32.Should().Be(data.SubArray[i].CountInt, "") |> ignore
     
     [<Test>]
     let ``Test write of object array set to null``() =
@@ -490,8 +490,8 @@ module WriterExecutionTests =
         let data = {
             TestClassWithSubClassDictionary.Name = "qwqdqsqddq"
             TestClassWithSubClassDictionary.Dict = [
-                 "KeyA", { Name = "oiwdqwjdoipqwd";  Count = 2131; Date = DateTime.UtcNow } 
-                 "KeyB", { Name = "wqdqwqdwdwq";  Count = 1111; Date = DateTime.UtcNow.AddHours(3) } 
+                 "KeyA", { Name = "oiwdqwjdoipqwd";  CountInt = 2131; Date = DateTime.UtcNow } 
+                 "KeyB", { Name = "wqdqwqdwdwq";  CountInt = 1111; Date = DateTime.UtcNow.AddHours(3) } 
             ] |> dict |> Dictionary
         }        
         
@@ -500,10 +500,10 @@ module WriterExecutionTests =
         
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
         test["Dict"].AsBsonDocument["KeyA"].AsBsonDocument["Name"].AsString.Should().Be(data.Dict["KeyA"].Name, "") |> ignore
-        test["Dict"].AsBsonDocument["KeyA"].AsBsonDocument["Count"].AsInt32.Should().Be(data.Dict["KeyA"].Count, "") |> ignore
+        test["Dict"].AsBsonDocument["KeyA"].AsBsonDocument["CountInt"].AsInt32.Should().Be(data.Dict["KeyA"].CountInt, "") |> ignore
         test["Dict"].AsBsonDocument["KeyA"].AsBsonDocument["Date"].ToUniversalTime().Should().BeCloseTo(data.Dict["KeyA"].Date, TimeSpan.FromMilliseconds(1), "") |> ignore
         test["Dict"].AsBsonDocument["KeyB"].AsBsonDocument["Name"].AsString.Should().Be(data.Dict["KeyB"].Name, "") |> ignore
-        test["Dict"].AsBsonDocument["KeyB"].AsBsonDocument["Count"].AsInt32.Should().Be(data.Dict["KeyB"].Count, "") |> ignore
+        test["Dict"].AsBsonDocument["KeyB"].AsBsonDocument["CountInt"].AsInt32.Should().Be(data.Dict["KeyB"].CountInt, "") |> ignore
         test["Dict"].AsBsonDocument["KeyB"].AsBsonDocument["Date"].ToUniversalTime().Should().BeCloseTo(data.Dict["KeyB"].Date, TimeSpan.FromMilliseconds(1), "") |> ignore
         
         
