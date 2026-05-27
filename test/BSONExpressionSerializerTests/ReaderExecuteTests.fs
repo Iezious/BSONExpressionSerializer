@@ -20,7 +20,7 @@ module ReaderExecuteTests =
         
         test.CountInt.Should().Be(data.CountInt, "") |> ignore  
         test.Name.Should().Be(data.Name, "") |> ignore
-        test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore
+        test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100L), "") |> ignore
         
     [<Test>]
     let ``Test read types``() =
@@ -33,7 +33,7 @@ module ReaderExecuteTests =
         test.Value.Should().BeApproximately(data.Value, 0.0001, "") |> ignore  
         test.Name.Should().Be(data.Name, "") |> ignore
         test.Is.Should().Be(data.Is, "") |> ignore
-        test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore        
+        test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100L), "") |> ignore        
     
     [<Test>]
     let ``Test read types with conversion``() =
@@ -45,7 +45,7 @@ module ReaderExecuteTests =
         test.CountLong.Should().Be(data.CountLong, "") |> ignore  
         test.Value.Should().BeApproximately(data.Value, 0.0001, "") |> ignore  
         test.Name.Should().Be(data.Name, "") |> ignore
-        test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore
+        test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100L), "") |> ignore
     
     [<Test>]
     let ``Test read flat class with defaults``() =
@@ -55,7 +55,7 @@ module ReaderExecuteTests =
         
         test.CountInt.Should().Be(0, "") |> ignore  
         test.Name.Should().Be(data.Name, "") |> ignore
-        test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore
+        test.Date.Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100L), "") |> ignore
         
     [<Test>]
     let ``Test read flat class with voption``() =
@@ -315,7 +315,7 @@ module ReaderExecuteTests =
         test.CountNullable.Should().NotBeNull("") |> ignore
         test.CountNullable.Value.Should().Be(data.CountNullable, "") |> ignore
         test.DateNullable.Should().NotBeNull("") |> ignore
-        test.DateNullable.Value.Should().BeCloseTo(data.DateNullable, TimeSpan.FromMilliseconds(1), "") |> ignore
+        test.DateNullable.Value.Should().BeCloseTo(data.DateNullable, TimeSpan.FromMilliseconds(1L), "") |> ignore
         
             
     [<Test>]

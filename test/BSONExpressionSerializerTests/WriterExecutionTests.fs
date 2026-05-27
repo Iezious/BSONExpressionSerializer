@@ -25,7 +25,7 @@ module WriterExecutionTests =
         
         test["CountInt"].AsInt32.Should().Be(data.CountInt, "") |> ignore  
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
-        test["Date"].ToUniversalTime().Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore
+        test["Date"].ToUniversalTime().Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100L), "") |> ignore
 
         
     [<Test>]
@@ -47,7 +47,7 @@ module WriterExecutionTests =
         test["Value"].AsDouble.Should().BeApproximately(data.Value, 0.0001, "") |> ignore  
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
         test["Is"].AsBoolean.Should().Be(data.Is, "") |> ignore
-        test["Date"].ToUniversalTime().Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100), "") |> ignore        
+        test["Date"].ToUniversalTime().Should().BeCloseTo(data.Date, TimeSpan.FromMilliseconds(100L), "") |> ignore        
     
     [<Test>]
     let ``Test ignore default values``() =
@@ -316,7 +316,7 @@ module WriterExecutionTests =
         let test =  convert.Invoke(data)
         
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
-        test["OptDate"].ToUniversalTime().Should().BeCloseTo(data.OptDate.Value, TimeSpan.FromMilliseconds(1), "") |> ignore
+        test["OptDate"].ToUniversalTime().Should().BeCloseTo(data.OptDate.Value, TimeSpan.FromMilliseconds(1L), "") |> ignore
 
     [<Test>]
     let ``Test write of datetime value option None``() =
@@ -501,10 +501,10 @@ module WriterExecutionTests =
         test["Name"].AsString.Should().Be(data.Name, "") |> ignore
         test["Dict"].AsBsonDocument["KeyA"].AsBsonDocument["Name"].AsString.Should().Be(data.Dict["KeyA"].Name, "") |> ignore
         test["Dict"].AsBsonDocument["KeyA"].AsBsonDocument["CountInt"].AsInt32.Should().Be(data.Dict["KeyA"].CountInt, "") |> ignore
-        test["Dict"].AsBsonDocument["KeyA"].AsBsonDocument["Date"].ToUniversalTime().Should().BeCloseTo(data.Dict["KeyA"].Date, TimeSpan.FromMilliseconds(1), "") |> ignore
+        test["Dict"].AsBsonDocument["KeyA"].AsBsonDocument["Date"].ToUniversalTime().Should().BeCloseTo(data.Dict["KeyA"].Date, TimeSpan.FromMilliseconds(1L), "") |> ignore
         test["Dict"].AsBsonDocument["KeyB"].AsBsonDocument["Name"].AsString.Should().Be(data.Dict["KeyB"].Name, "") |> ignore
         test["Dict"].AsBsonDocument["KeyB"].AsBsonDocument["CountInt"].AsInt32.Should().Be(data.Dict["KeyB"].CountInt, "") |> ignore
-        test["Dict"].AsBsonDocument["KeyB"].AsBsonDocument["Date"].ToUniversalTime().Should().BeCloseTo(data.Dict["KeyB"].Date, TimeSpan.FromMilliseconds(1), "") |> ignore
+        test["Dict"].AsBsonDocument["KeyB"].AsBsonDocument["Date"].ToUniversalTime().Should().BeCloseTo(data.Dict["KeyB"].Date, TimeSpan.FromMilliseconds(1L), "") |> ignore
         
         
     [<Test>]

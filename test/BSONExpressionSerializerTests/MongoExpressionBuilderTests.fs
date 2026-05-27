@@ -12,7 +12,8 @@ module MongoExpressionBuilderTests =
     [<Test>]
     let ``Flat class find expression should not fail``() =
         let expression = ExpressionFilterDefinition<TestFlatClass>(fun f -> f.Name <> "a")
-        let b = expression.Render(ExpressionDocumentSerializer<TestFlatClass>() ,BsonSerializer.SerializerRegistry)
+//        let b = expression.Render(ExpressionDocumentSerializer<TestFlatClass>() ,BsonSerializer.SerializerRegistry)
+        let b = expression.Render(RenderArgs<TestFlatClass>(ExpressionDocumentSerializer<TestFlatClass>(), BsonSerializer.SerializerRegistry))
         Assert.That(b, Is.Not.Null)
         Assert.That(b["Name"], Is.Not.Empty)
         Assert.That(b["Name"].["$ne"].AsString, Is.EqualTo("a"))
@@ -20,28 +21,32 @@ module MongoExpressionBuilderTests =
     [<Test>]
     let ``find expression for int enum should not fail``() =
         let expression = ExpressionFilterDefinition<TestClassWithEnumInt>(fun f -> f.EnumData = TestEnum.OptionB)
-        let b = expression.Render(ExpressionDocumentSerializer<TestClassWithEnumInt>() ,BsonSerializer.SerializerRegistry)
+        //let b = expression.Render(ExpressionDocumentSerializer<TestClassWithEnumInt>() ,BsonSerializer.SerializerRegistry)
+        let b = expression.Render(RenderArgs<TestClassWithEnumInt>(ExpressionDocumentSerializer<TestClassWithEnumInt>(), BsonSerializer.SerializerRegistry))
         Assert.That(b, Is.Not.Null)
         Assert.That(b["EnumData"].AsInt32, Is.EqualTo(int TestEnum.OptionB))
 
     [<Test>]
     let ``find expression for string enum should not fail``() =
         let expression = ExpressionFilterDefinition<TestClassWithEnumString>(fun f -> f.EnumData = TestEnum.OptionB)
-        let b = expression.Render(ExpressionDocumentSerializer<TestClassWithEnumString>() ,BsonSerializer.SerializerRegistry)
+        //let b = expression.Render(ExpressionDocumentSerializer<TestClassWithEnumString>() ,BsonSerializer.SerializerRegistry)
+        let b = expression.Render(RenderArgs<TestClassWithEnumString>(ExpressionDocumentSerializer<TestClassWithEnumString>(), BsonSerializer.SerializerRegistry))
         Assert.That(b, Is.Not.Null)
         Assert.That(b["EnumData"].AsString, Is.EqualTo(nameof TestEnum.OptionB))
         
     [<Test>]
     let ``find expression for nested class string prop should not fail``() =
         let expression = ExpressionFilterDefinition<TestClassWithSubObject>(fun f -> f.SubObject.Name = "wqeqweqwe")
-        let b = expression.Render(ExpressionDocumentSerializer<TestClassWithSubObject>() ,BsonSerializer.SerializerRegistry)
+        //let b = expression.Render(ExpressionDocumentSerializer<TestClassWithSubObject>() ,BsonSerializer.SerializerRegistry)
+        let b = expression.Render(RenderArgs<TestClassWithSubObject>(ExpressionDocumentSerializer<TestClassWithSubObject>(), BsonSerializer.SerializerRegistry))
         Assert.That(b, Is.Not.Null)
         Assert.That(b["SubObject.Name"].AsString, Is.EqualTo("wqeqweqwe"))
                 
     [<Test>]
     let ``find expression for nested class int prop should not fail``() =
         let expression = ExpressionFilterDefinition<TestClassWithSubObject>(fun f -> f.SubObject.CountInt = 22)
-        let b = expression.Render(ExpressionDocumentSerializer<TestClassWithSubObject>() ,BsonSerializer.SerializerRegistry)
+//        let b = expression.Render(ExpressionDocumentSerializer<TestClassWithSubObject>() ,BsonSerializer.SerializerRegistry)
+        let b = expression.Render(RenderArgs<TestClassWithSubObject>(ExpressionDocumentSerializer<TestClassWithSubObject>(), BsonSerializer.SerializerRegistry))
         Assert.That(b, Is.Not.Null)
         Assert.That(b["SubObject.CountInt"].AsInt32, Is.EqualTo(22))
         
@@ -49,7 +54,8 @@ module MongoExpressionBuilderTests =
     let ``find expression for nested class should not fail for datetime values``() =
         let now = DateTime.Now
         let expression = ExpressionFilterDefinition<TestClassWithSubObject>(fun f -> f.SubObject.Date < now)
-        let b = expression.Render(ExpressionDocumentSerializer<TestClassWithSubObject>() ,BsonSerializer.SerializerRegistry)
+        // let b = expression.Render(ExpressionDocumentSerializer<TestClassWithSubObject>() ,BsonSerializer.SerializerRegistry)
+        let b = expression.Render(RenderArgs<TestClassWithSubObject>(ExpressionDocumentSerializer<TestClassWithSubObject>(), BsonSerializer.SerializerRegistry))
         Assert.That(b, Is.Not.Null)
         Assert.That(b["SubObject.Date"], Is.Not.Null)
         
@@ -57,7 +63,8 @@ module MongoExpressionBuilderTests =
     [<Test>]
     let ``find expression with flat string option should not fail``() =
         let expression = ExpressionFilterDefinition<TestFlatClassWithOptionValue>(fun f -> f.OptString = Some "a")
-        let b = expression.Render(ExpressionDocumentSerializer<TestFlatClassWithOptionValue>() ,BsonSerializer.SerializerRegistry)
+        //let b = expression.Render(ExpressionDocumentSerializer<TestFlatClassWithOptionValue>() ,BsonSerializer.SerializerRegistry)
+        let b = expression.Render(RenderArgs<TestFlatClassWithOptionValue>(ExpressionDocumentSerializer<TestFlatClassWithOptionValue>(), BsonSerializer.SerializerRegistry))
         Assert.That(b, Is.Not.Null)
         Assert.That(b["OptString"].AsString, Is.EqualTo("a"))
 
@@ -78,13 +85,15 @@ module MongoExpressionBuilderTests =
     [<Test>]
     let ``Set for flat class should not fail``() =
         let update = UpdateDefinitionBuilder<TestFlatClass>().Set((fun f -> f.Name), "a")
-        let b = update.Render(ExpressionDocumentSerializer<TestFlatClass>() ,BsonSerializer.SerializerRegistry)
+        //let b = update.Render(ExpressionDocumentSerializer<TestFlatClass>() ,BsonSerializer.SerializerRegistry)
+        let b = update.Render(RenderArgs<TestFlatClass>(ExpressionDocumentSerializer<TestFlatClass>(), BsonSerializer.SerializerRegistry))
         Assert.That(b, Is.Not.Null)
         Assert.That(b["$set"].["Name"].AsString, Is.EqualTo("a"))
         
     [<Test>]
     let ``update expression with flat string option should not fail``() =
         let expression = UpdateDefinitionBuilder<TestFlatClassWithOptionValue>().Set((fun f -> f.OptString), Some "a")
-        let b = expression.Render(ExpressionDocumentSerializer<TestFlatClassWithOptionValue>() ,BsonSerializer.SerializerRegistry)
+        // let b = expression.Render(ExpressionDocumentSerializer<TestFlatClassWithOptionValue>() ,BsonSerializer.SerializerRegistry)
+        let b = expression.Render(RenderArgs<TestFlatClassWithOptionValue>(ExpressionDocumentSerializer<TestFlatClassWithOptionValue>(), BsonSerializer.SerializerRegistry))
         Assert.That(b, Is.Not.Null)
         Assert.That(b["$set"].["OptString"].AsString, Is.EqualTo("a"))        
