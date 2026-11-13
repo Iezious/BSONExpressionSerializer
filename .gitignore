@@ -32,3 +32,6 @@ _ReSharper*/
 packages/
 /.idea/
 /output/
+
+# code_index (per-service)
+docs/.helpers/index.sqlite*

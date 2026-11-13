@@ -1,0 +1,10 @@
+[code_index]
+version       = ">=0.2,<0.4"
+name          = "BSONExpressionSerializer"
+project       = "BSONExpressionSerializer"
+project_root  = "D:/GitRoot/_SIN/BSONExpressionSerializer"
+roots         = [
+  "D:/GitRoot/_SIN/BSONExpressionSerializer",
+]
+embed_backend = "fastembed"
+embed_model   = "jinaai/jina-embeddings-v2-base-code"
