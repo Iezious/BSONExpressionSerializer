@@ -4,6 +4,10 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Iezious.Libs.BSONExpression
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BSONExpressionSerializerTests", "test\BSONExpressionSerializerTests\BSONExpressionSerializerTests.fsproj", "{18FFC2AE-BCD9-4081-8D80-838DA3AA5740}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{1EC178DB-EEA5-4AF3-B6C7-C33F86546683}"
+	ProjectSection(SolutionItems) = preProject
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

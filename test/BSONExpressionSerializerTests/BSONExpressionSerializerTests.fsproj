@@ -37,4 +37,8 @@
       <ProjectReference Include="..\..\src\Iezious.Libs.BSONExpressionSerializer\Iezious.Libs.BSONExpressionSerializer.fsproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <None Include="**\AGENTS.md" />
+    </ItemGroup>
+
 </Project>

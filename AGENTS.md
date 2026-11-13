@@ -1,4 +1,4 @@
-# Claude session guide — BSONExpressionSerializer
+# Agent guide — BSONExpressionSerializer
 
 <!-- agent-ready:start -->
 
