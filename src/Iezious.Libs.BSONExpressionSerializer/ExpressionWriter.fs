@@ -11,7 +11,9 @@ module ExpressionWriter =
     
     let inline private bval (v:Expression):Expression = Expression.Convert(v, typeof<BsonValue>)
     
-    let private getNameInBson(m:MemberInfo) =
+    // Internal (was private) so that ExpressionDocumentSerializer translates typed filters and updates to the same
+    // stored name as whole-document storage (D6).
+    let internal getNameInBson(m:MemberInfo) =
         match m.GetCustomAttribute<BsonElementAttribute>() with
         | null -> m.Name
         | attr when String.IsNullOrWhiteSpace(attr.ElementName) -> m.Name
@@ -182,7 +184,15 @@ module ExpressionWriter =
                 
                 match ofType with
                 | t when t = typeof<string> -> Expression.Convert(valueExpr, typeof<BsonString>) :> Expression |> nullCheck  
-                | t when t = typeof<byte[]> -> Expression.New(typeof<BsonBinaryData>.GetConstructor([| typeof<byte[]> |]), valueExpr) 
+                // Null binary guard (US-004.AC-4, AC-5; known defect D3 / DEC-000-15; fixed per DEC-001-3).
+                // This branch used to build BsonBinaryData unguarded, so a null byte array failed the write with
+                // "Value cannot be null. (Parameter 'bytes')" unless "omit when null" / "omit when default" left the
+                // member out, and a null element of a byte-array array or a null dictionary value always failed (no
+                // attribute can omit those). Binary now goes through nullCheck, like text: a null byte array is stored
+                // as an explicit BSON null, which the reader's existing nullSafe guard loads back as null. The omission
+                // attributes are unaffected: their check wraps the add, so an omitted member never reaches this branch.
+                | t when t = typeof<byte[]>
+                     -> Expression.New(typeof<BsonBinaryData>.GetConstructor([| typeof<byte[]> |]), valueExpr) :> Expression |> nullCheck
                 | t when t = typeof<Int32> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
                 | t when t = typeof<Int64> -> Expression.Convert(valueExpr, typeof<BsonValue>)
                 | t when t = typeof<Guid> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
@@ -238,9 +248,23 @@ module ExpressionWriter =
         let writeIfNotValueNoneCheck (_: PropertyInfo) (valueExr: Expression) : Expression =
             Expression.Property(valueExr, "IsSome")
                             
-        let getChecker(pr: PropertyInfo) =                 
-            let attrd = pr.GetCustomAttribute<BsonIgnoreIfDefaultAttribute>()
-            let attrn = pr.GetCustomAttribute<BsonIgnoreIfNullAttribute>()
+        let getChecker(pr: PropertyInfo) =
+            // Omission on/off argument (US-007.AC-4; known defect D4 / DEC-000-17; fixed per DEC-001-4).
+            // Only the presence of BsonIgnoreIfDefault used to be checked, so BsonIgnoreIfDefault(false) still left
+            // the member out when it was equal to its default. The attribute now counts only when its Value is true;
+            // switched off, the member is treated as if the attribute were absent, so the remaining rules apply
+            // ("omit when null", then the option / value-option kind rule, otherwise always written).
+            let attrd =
+                match pr.GetCustomAttribute<BsonIgnoreIfDefaultAttribute>() with
+                | attr when attr <> null && attr.Value -> attr
+                | _ -> null
+            // BsonIgnoreIfNull had the same defect (found while fixing D4): BsonIgnoreIfNull(false) still left a null
+            // member out. It also counts only when its Value is true; switched off, a null is written as an explicit null
+            // (unless "omit when default" applies), exactly as if the attribute were absent.
+            let attrn =
+                match pr.GetCustomAttribute<BsonIgnoreIfNullAttribute>() with
+                | attr when attr <> null && attr.Value -> attr
+                | _ -> null
             let t = pr.PropertyType
             
             if(attrn <> null && attrd <> null)
@@ -255,12 +279,37 @@ module ExpressionWriter =
                 then Some writeIfNotValueNoneCheck
             else None
         
+        let storedProps =
+            objType.GetProperties(BindingFlags.Instance + BindingFlags.Public)
+            |> Array.filter (fun p -> p.GetCustomAttribute<BsonIgnoreAttribute>() = null)
+
+        // Duplicate stored-name guard (US-005.AC-3; known defect D1 / DEC-000-3; fixed per DEC-001-1).
+        // Every member that is not [<BsonIgnore>] is stored under getNameInBson: its BsonElement name, or the property name.
+        // Two members resolving to one stored name (two equal BsonElement names, or a BsonElement name equal to another
+        // property's name) used to pass creation, and then every whole-document write of the type failed with
+        // "Duplicate element name" from BsonDocument.Add. The type is now refused here, while the writer is being built.
+        // build runs eagerly for the root type and recursively for nested types, array elements and dictionary values,
+        // and ExpressionDocumentSerializer<'T> builds its writer in its constructor, so a clash at any depth fails
+        // registration at service start instead of the first store. The message names the type, the stored name and
+        // the clashing members. The reader keeps no such guard: reading one field into two members does not fail.
+        let duplicates =
+            storedProps
+            |> Array.groupBy getNameInBson
+            |> Array.filter (fun (_, ps) -> ps.Length > 1)
+            |> Array.map (fun (name, ps) ->
+                let members = ps |> Array.map (fun p -> p.Name) |> String.concat ", "
+                $"'{name}' <- {members}")
+
+        if duplicates.Length > 0 then
+            let details = String.concat "; " duplicates
+            invalidOp $"Type '{objType.FullName}' maps more than one member to the same stored name: {details}"
+
         let addMethod = typeof<BsonDocument>.GetMethod("Add", [| typeof<string>; typeof<BsonValue> |])
         let _v_res = Expression.Variable(typeof<BsonDocument>, "result")
         let steps = List<Expression>()
         steps.Add(Expression.Assign(_v_res, Expression.New(typeof<BsonDocument>)))
 
-        for pr in (objType.GetProperties(BindingFlags.Instance + BindingFlags.Public) |> Seq.where(fun p -> p.GetCustomAttribute<BsonIgnoreAttribute>() = null)) do
+        for pr in storedProps do
             let name = getNameInBson pr |> Expression.Constant
             let value = Expression.Property(inst, pr)
             let valExpr = buildValue pr value

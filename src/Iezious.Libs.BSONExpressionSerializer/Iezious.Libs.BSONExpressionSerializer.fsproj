@@ -23,4 +23,8 @@
       <Compile Include="ExpressionDocumentSerializer.fs" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Include="**\AGENTS.md" />
+    </ItemGroup>
+
 </Project>

@@ -14,6 +14,7 @@
         <Compile Include="WriterBuildTests.fs" />
         <Compile Include="WriterExecutionTests.fs" />
         <Compile Include="MongoExpressionBuilderTests.fs" />
+        <Compile Include="PostReviewTests.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
@@ -35,6 +36,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Iezious.Libs.BSONExpressionSerializer\Iezious.Libs.BSONExpressionSerializer.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="**\AGENTS.md" />
     </ItemGroup>
 
 </Project>

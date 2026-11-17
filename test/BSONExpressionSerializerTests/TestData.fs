@@ -222,3 +222,357 @@ type TestClassWithStaticProperty = {
     Name: string
     Count: int32
 } with static member Projection = {| One=true; Second = true |}    
+
+// ===== Fixture types for PostReviewTests.fs — one group per defect (D1–D8) =====
+
+// ---- D1: two members mapped to one stored name ----
+
+[<CLIMutable>]
+type D1TwoMembersOneStoredName = {
+    [<BsonElement("x")>]
+    A: string
+    [<BsonElement("x")>]
+    B: string
+}
+
+[<CLIMutable>]
+type D1StoredNameClashesWithPropertyName = {
+    Name: string
+    [<BsonElement("Name")>]
+    Other: string
+}
+
+// ---- D2: null text at any depth (reuses TestFlatClass, TestClassWithSubObject,
+//      TestFlatClassWithArrayOfStringValues, TestClassWithStringDictionary) ----
+
+// D2 (omission): a reference member with BsonIgnoreIfDefault and no value is left out of the document
+// (smaller documents; newly added fields stay absent in old and new data alike). One type per reference kind,
+// so a kind that fails at creation does not hide the others.
+
+[<CLIMutable>]
+type D2OmitNullText = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: string
+}
+
+[<CLIMutable>]
+type D2OmitNullSubObject = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: TestFlatClass
+}
+
+[<CLIMutable>]
+type D2OmitNullTextArray = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: string[]
+}
+
+[<CLIMutable>]
+type D2OmitNullSubObjectArray = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: TestFlatClass[]
+}
+
+[<CLIMutable>]
+type D2OmitNullDictionary = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: Dictionary<string, string>
+}
+
+[<CLIMutable>]
+type D2OmitNullBsonDocument = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: BsonDocument
+}
+
+[<CLIMutable>]
+type D2OmitNullBinary = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: byte[]
+}
+
+// The same omission one level down and inside array elements.
+[<CLIMutable>]
+type D2OmitNullTextNested = {
+    Name: string
+    Sub: D2OmitNullText
+    Items: D2OmitNullText[]
+}
+
+// D2 (absence): members with no attributes, read from documents written before the members existed.
+// Every member that can hold "no value" must load as null / empty when its field is absent.
+
+[<CLIMutable>]
+type D2AbsentFields = {
+    Name: string
+    Text: string
+    Sub: TestFlatClass
+    Texts: string[]
+    Subs: TestFlatClass[]
+    Dict: Dictionary<string, string>
+    Doc: BsonDocument
+    Payload: byte[]
+    CountNullable: Nullable<int32>
+    TextOpt: string option
+    TextVOpt: string voption
+}
+
+[<CLIMutable>]
+type D2AbsentFieldsNested = {
+    Name: string
+    Sub: D2AbsentFields
+    Items: D2AbsentFields[]
+}
+
+// ---- D3: null binary with no omit choice ----
+
+[<CLIMutable>]
+type D3BinaryNoOmit = {
+    Name: string
+    Payload: byte[]
+}
+
+[<CLIMutable>]
+type D3ArrayOfBinary = {
+    Name: string
+    Payloads: byte[][]
+}
+
+// D3 at depth: binary with no attribute in a nested type, in array elements and as dictionary values.
+[<CLIMutable>]
+type D3BinaryNested = {
+    Name: string
+    Sub: D3BinaryNoOmit
+    Items: D3BinaryNoOmit[]
+}
+
+[<CLIMutable>]
+type D3BinaryDictionary = {
+    Name: string
+    Dict: Dictionary<string, byte[]>
+}
+
+// D3 omission at depth: binary with BsonIgnoreIfDefault (D2OmitNullBinary) in a nested type and in array elements.
+// Omission with BsonIgnoreIfNull at the top level reuses TestClassBinaryData.
+[<CLIMutable>]
+type D3OmitNullBinaryNested = {
+    Name: string
+    Sub: D2OmitNullBinary
+    Items: D2OmitNullBinary[]
+}
+
+// ---- D4: "omit when default" switched off ----
+
+[<CLIMutable>]
+type D4IgnoreDefaultOffInt = {
+    Name: string
+    [<BsonIgnoreIfDefault(false); BsonDefaultValue(0)>]
+    Count: int32
+}
+
+[<CLIMutable>]
+type D4IgnoreDefaultOffString = {
+    [<BsonIgnoreIfDefault(false); BsonDefaultValue("zz")>]
+    Name: string
+    Count: int32
+}
+
+[<CLIMutable>]
+type D4IgnoreNullAndDefaultOff = {
+    [<BsonIgnoreIfNull; BsonIgnoreIfDefault(false); BsonDefaultValue("zz")>]
+    Name: string
+    Count: int32
+}
+
+// D4 switched off with no declared default: the default of a reference member is null.
+[<CLIMutable>]
+type D4IgnoreDefaultOffNullText = {
+    Name: string
+    [<BsonIgnoreIfDefault(false)>]
+    Value: string
+}
+
+// D4 switched explicitly ON: must keep omitting (regression guard for the fix).
+[<CLIMutable>]
+type D4IgnoreDefaultOnInt = {
+    Name: string
+    [<BsonIgnoreIfDefault(true); BsonDefaultValue(0)>]
+    Count: int32
+}
+
+// D4 switched off on an option: behaves as if the attribute were absent, so the option's own rule applies.
+[<CLIMutable>]
+type D4IgnoreDefaultOffOption = {
+    Name: string
+    [<BsonIgnoreIfDefault(false)>]
+    Value: string option
+}
+
+// D4 switched off at depth: in a nested type and in array elements.
+[<CLIMutable>]
+type D4IgnoreDefaultOffNested = {
+    Name: string
+    Sub: D4IgnoreDefaultOffInt
+    Items: D4IgnoreDefaultOffInt[]
+}
+
+// D4 (BsonIgnoreIfNull): "omit when null" switched off — same defect as BsonIgnoreIfDefault(false):
+// only the presence of the attribute was checked, never its on/off argument.
+
+[<CLIMutable>]
+type D4IgnoreNullOffText = {
+    Name: string
+    [<BsonIgnoreIfNull(false)>]
+    Value: string
+}
+
+[<CLIMutable>]
+type D4IgnoreNullOffSubObject = {
+    Name: string
+    [<BsonIgnoreIfNull(false)>]
+    Value: TestFlatClass
+}
+
+[<CLIMutable>]
+type D4IgnoreNullOffBinary = {
+    Name: string
+    [<BsonIgnoreIfNull(false)>]
+    Value: byte[]
+}
+
+// Switched explicitly ON: must keep omitting (regression guard for the fix).
+[<CLIMutable>]
+type D4IgnoreNullOnText = {
+    Name: string
+    [<BsonIgnoreIfNull(true)>]
+    Value: string
+}
+
+// "omit when null" off, "omit when default" on with a declared default: only the default rule applies.
+[<CLIMutable>]
+type D4IgnoreNullOffDefaultOn = {
+    Name: string
+    [<BsonIgnoreIfNull(false); BsonIgnoreIfDefault; BsonDefaultValue("zz")>]
+    Value: string
+}
+
+// Both switched off: behaves as if neither attribute were present (always written).
+[<CLIMutable>]
+type D4IgnoreNullOffDefaultOff = {
+    Name: string
+    [<BsonIgnoreIfNull(false); BsonIgnoreIfDefault(false); BsonDefaultValue("zz")>]
+    Value: string
+}
+
+// Switched off on an option: the option's own rule applies (None left out).
+[<CLIMutable>]
+type D4IgnoreNullOffOption = {
+    Name: string
+    [<BsonIgnoreIfNull(false)>]
+    Value: string option
+}
+
+// Switched off at depth: in a nested type and in array elements.
+[<CLIMutable>]
+type D4IgnoreNullOffNested = {
+    Name: string
+    Sub: D4IgnoreNullOffText
+    Items: D4IgnoreNullOffText[]
+}
+
+// ---- D5: by-name enumeration inside option / nullable / array ----
+
+[<CLIMutable>]
+type D5EnumStringInOption = {
+    Name: string
+    [<BsonRepresentation(BsonType.String)>]
+    EnumOpt: TestEnum option
+}
+
+[<CLIMutable>]
+type D5EnumStringInNullable = {
+    Name: string
+    [<BsonRepresentation(BsonType.String)>]
+    EnumNullable: Nullable<TestEnum>
+}
+
+[<CLIMutable>]
+type D5EnumStringInArray = {
+    Name: string
+    [<BsonRepresentation(BsonType.String)>]
+    Enums: TestEnum[]
+}
+
+// D5 by-name in a value option reuses TestClassWithEnumStringOption (EnumData: TestEnum voption, String).
+
+// D5 with a 64-bit number form: the declared form must be used inside wrappers too, not only the by-name form.
+[<CLIMutable>]
+type D5EnumInt64InOption = {
+    Name: string
+    [<BsonRepresentation(BsonType.Int64)>]
+    EnumOpt: TestEnum option
+}
+
+[<CLIMutable>]
+type D5EnumInt64InArray = {
+    Name: string
+    [<BsonRepresentation(BsonType.Int64)>]
+    Enums: TestEnum[]
+}
+
+// D5 with no declared form: stays a 32-bit number inside wrappers (regression guard).
+[<CLIMutable>]
+type D5EnumNoFormInOption = {
+    Name: string
+    EnumOpt: TestEnum option
+}
+
+[<CLIMutable>]
+type D5EnumNoFormInArray = {
+    Name: string
+    Enums: TestEnum[]
+}
+
+// ---- D6: stored names and exclusion in typed filters / updates ----
+
+[<CLIMutable>]
+type D6RenamedAndExcluded = {
+    [<BsonElement("n")>]
+    Name: string
+    Count: int32
+    [<BsonIgnore>]
+    Excluded: string
+}
+
+// D6 stored names on other member kinds: a by-name enumeration, an option, a blank BsonElement (falls back to the
+// property name, as in whole-document storage) and a plain member with no attribute.
+[<CLIMutable>]
+type D6RenamedKinds = {
+    [<BsonElement("e"); BsonRepresentation(BsonType.String)>]
+    Kind: TestEnum
+    [<BsonElement("o")>]
+    Opt: string option
+    [<BsonElement("")>]
+    Blank: string
+    Plain: int32
+}
+
+// ---- D7: concurrent first use of members ----
+
+[<CLIMutable>]
+type D7ManyFields = {
+    F01: string; F02: string; F03: string; F04: string
+    F05: int32;  F06: int32;  F07: int32;  F08: int32
+    F09: int64;  F10: int64;  F11: int64;  F12: int64
+    F13: bool;   F14: bool;   F15: float;  F16: float
+}
+
+// ---- D8: option / value-option member read of an explicit null
+//      (reuses TestFlatClassWithOptionValue, TestFlatClassWithVOptionString) ----
