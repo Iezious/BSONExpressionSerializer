@@ -149,7 +149,14 @@ module ExpressionReader =
 
             and readValue (ofType:Type) (bsonExpr: Expression) : Expression =
                 match ofType with
-                | t when t = typeof<string> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsString)) 
+                // Null text guard (US-004.AC-3; known defect D2 / DEC-000-15).
+                // The writer stores a text member with no value as an explicit BSON null, but this branch used to read
+                // AsString unguarded, so the library could not read back its own documents: a stored null failed the
+                // load with "Unable to cast ... 'BsonNull' to type 'BsonString'". Text now goes through nullSafe, like
+                // binary, arrays and dictionaries: a stored null loads as a null string. readValue serves every depth,
+                // so this covers top-level members, nested types, array elements and dictionary values alike.
+                | t when t = typeof<string>
+                     -> nullSafe (fun _ e -> Expression.Property(e, nameof(Unchecked.defaultof<BsonValue>.AsString)) :> Expression) t bsonExpr
                 | t when t = typeof<bool> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsBoolean)) 
                 | t when t = typeof<Int32> -> Expression.Property(bsonExpr, nameof(Unchecked.defaultof<BsonValue>.AsInt32)) 
                 | t when t = typeof<Int64> ->

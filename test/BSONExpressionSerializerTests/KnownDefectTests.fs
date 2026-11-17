@@ -107,6 +107,116 @@ module KnownDefectTests =
         Assert.That(back.Dict.ContainsKey "k", Is.True)
         Assert.That(back.Dict["k"], Is.Null)
 
+    // ---------------------------------------------------------------------
+    // D2 (extension) — omission of null reference members with BsonIgnoreIfDefault.
+    // A member with no value and "omit when default" must not create the field: the document stays smaller and
+    // a newly added field stays absent, exactly as in documents written before the field existed.
+    // The document read back without the field must load the member as null.
+    // ---------------------------------------------------------------------
+
+    let private assertOmittedAndLoadsNull<'t> (value: 't) (getValue: 't -> obj) =
+        let doc, back = roundTrip value
+        Assert.That(doc.Contains "Value", Is.False, $"written: {doc}")
+        Assert.That(getValue back, Is.Null)
+
+    [<Test>]
+    let ``D2 omit-when-default leaves out null text and it loads as null``() =
+        assertOmittedAndLoadsNull { D2OmitNullText.Name = "a"; Value = null } (fun v -> box v.Value)
+
+    [<Test>]
+    let ``D2 omit-when-default leaves out a null nested object and it loads as null``() =
+        assertOmittedAndLoadsNull { D2OmitNullSubObject.Name = "a"; Value = Unchecked.defaultof<_> } (fun v -> box v.Value)
+
+    [<Test>]
+    let ``D2 omit-when-default leaves out a null text array and it loads as null``() =
+        assertOmittedAndLoadsNull { D2OmitNullTextArray.Name = "a"; Value = null } (fun v -> box v.Value)
+
+    [<Test>]
+    let ``D2 omit-when-default leaves out a null nested-object array and it loads as null``() =
+        assertOmittedAndLoadsNull { D2OmitNullSubObjectArray.Name = "a"; Value = null } (fun v -> box v.Value)
+
+    [<Test>]
+    let ``D2 omit-when-default leaves out a null dictionary and it loads as null``() =
+        assertOmittedAndLoadsNull { D2OmitNullDictionary.Name = "a"; Value = null } (fun v -> box v.Value)
+
+    [<Test>]
+    let ``D2 omit-when-default leaves out a null raw document and it loads as null``() =
+        assertOmittedAndLoadsNull { D2OmitNullBsonDocument.Name = "a"; Value = null } (fun v -> box v.Value)
+
+    [<Test>]
+    let ``D2 omit-when-default leaves out a null binary and it loads as null``() =
+        assertOmittedAndLoadsNull { D2OmitNullBinary.Name = "a"; Value = null } (fun v -> box v.Value)
+
+    [<Test>]
+    let ``D2 omit-when-default still writes text that has a value``() =
+        let doc, back = roundTrip { D2OmitNullText.Name = "a"; Value = "x" }
+        Assert.That(doc["Value"].AsString, Is.EqualTo "x")
+        Assert.That(back.Value, Is.EqualTo "x")
+
+    [<Test>]
+    let ``D2 omit-when-default leaves out null text in a nested type and in array elements``() =
+        let value = {
+            D2OmitNullTextNested.Name = "a"
+            Sub = { D2OmitNullText.Name = "s"; Value = null }
+            Items = [| { D2OmitNullText.Name = "i"; Value = null } |]
+        }
+        let doc, back = roundTrip value
+        Assert.That(doc["Sub"].AsBsonDocument.Contains "Value", Is.False, $"written: {doc}")
+        Assert.That(doc["Items"].AsBsonArray[0].AsBsonDocument.Contains "Value", Is.False, $"written: {doc}")
+        Assert.That(back.Sub.Value, Is.Null)
+        Assert.That(back.Items[0].Value, Is.Null)
+
+    // ---------------------------------------------------------------------
+    // D2 (extension) — absent fields load as null / empty.
+    // Existing documents do not have fields added to a type later. Every member that can hold "no value"
+    // (text, nested object, arrays, dictionary, raw document, binary, nullable, option, value option)
+    // must load as null / empty when its field is absent, at the top level, in nested types and in array elements.
+    // ---------------------------------------------------------------------
+
+    let private assertAbsentMembersEmpty (v: D2AbsentFields) =
+        use _ = Assert.EnterMultipleScope()
+        Assert.That(v.Text, Is.Null, "Text")
+        Assert.That(v.Sub, Is.Null, "Sub")
+        Assert.That(v.Texts, Is.Null, "Texts")
+        Assert.That(v.Subs, Is.Null, "Subs")
+        Assert.That(v.Dict, Is.Null, "Dict")
+        Assert.That(v.Doc, Is.Null, "Doc")
+        Assert.That(v.Payload, Is.Null, "Payload")
+        Assert.That(v.CountNullable.HasValue, Is.False, "CountNullable")
+        Assert.That(v.TextOpt, Is.EqualTo(None: string option), "TextOpt")
+        Assert.That(v.TextVOpt, Is.EqualTo(ValueNone: string voption), "TextVOpt")
+
+    let private onlyName (name: string) = BsonDocument([ BsonElement("Name", BsonString name) ])
+
+    [<Test>]
+    let ``D2 absent fields load as null or empty through the reader``() =
+        let back = ExpressionReader.CreateReader<D2AbsentFields>().Invoke(onlyName "a")
+        Assert.That(back.Name, Is.EqualTo "a")
+        assertAbsentMembersEmpty back
+
+    [<Test>]
+    let ``D2 absent fields load as null or empty through the registered serializer``() =
+        let ser = ExpressionDocumentSerializer<D2AbsentFields>() :> IBsonSerializer<D2AbsentFields>
+        use reader = new BsonDocumentReader(onlyName "a")
+        let back = ser.Deserialize(BsonDeserializationContext.CreateRoot(reader), BsonDeserializationArgs())
+        Assert.That(back.Name, Is.EqualTo "a")
+        assertAbsentMembersEmpty back
+
+    [<Test>]
+    let ``D2 absent fields load as null or empty in a nested type and in array elements``() =
+        let doc =
+            BsonDocument([
+                BsonElement("Name", BsonString "a")
+                BsonElement("Sub", onlyName "s")
+                BsonElement("Items", BsonArray([ onlyName "i" ]))
+            ])
+        let back = ExpressionReader.CreateReader<D2AbsentFieldsNested>().Invoke(doc)
+        Assert.That(back.Sub.Name, Is.EqualTo "s")
+        assertAbsentMembersEmpty back.Sub
+        Assert.That(back.Items.Length, Is.EqualTo 1)
+        Assert.That(back.Items[0].Name, Is.EqualTo "i")
+        assertAbsentMembersEmpty back.Items[0]
+
     // =====================================================================
     // D3. A binary field with no value cannot be stored (DEC-000-15)
     //

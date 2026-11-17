@@ -245,6 +245,92 @@ type D1StoredNameClashesWithPropertyName = {
 // ---- D2: null text at any depth (reuses TestFlatClass, TestClassWithSubObject,
 //      TestFlatClassWithArrayOfStringValues, TestClassWithStringDictionary) ----
 
+// D2 (omission): a reference member with BsonIgnoreIfDefault and no value is left out of the document
+// (smaller documents; newly added fields stay absent in old and new data alike). One type per reference kind,
+// so a kind that fails at creation does not hide the others.
+
+[<CLIMutable>]
+type D2OmitNullText = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: string
+}
+
+[<CLIMutable>]
+type D2OmitNullSubObject = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: TestFlatClass
+}
+
+[<CLIMutable>]
+type D2OmitNullTextArray = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: string[]
+}
+
+[<CLIMutable>]
+type D2OmitNullSubObjectArray = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: TestFlatClass[]
+}
+
+[<CLIMutable>]
+type D2OmitNullDictionary = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: Dictionary<string, string>
+}
+
+[<CLIMutable>]
+type D2OmitNullBsonDocument = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: BsonDocument
+}
+
+[<CLIMutable>]
+type D2OmitNullBinary = {
+    Name: string
+    [<BsonIgnoreIfDefault>]
+    Value: byte[]
+}
+
+// The same omission one level down and inside array elements.
+[<CLIMutable>]
+type D2OmitNullTextNested = {
+    Name: string
+    Sub: D2OmitNullText
+    Items: D2OmitNullText[]
+}
+
+// D2 (absence): members with no attributes, read from documents written before the members existed.
+// Every member that can hold "no value" must load as null / empty when its field is absent.
+
+[<CLIMutable>]
+type D2AbsentFields = {
+    Name: string
+    Text: string
+    Sub: TestFlatClass
+    Texts: string[]
+    Subs: TestFlatClass[]
+    Dict: Dictionary<string, string>
+    Doc: BsonDocument
+    Payload: byte[]
+    CountNullable: Nullable<int32>
+    TextOpt: string option
+    TextVOpt: string voption
+}
+
+[<CLIMutable>]
+type D2AbsentFieldsNested = {
+    Name: string
+    Sub: D2AbsentFields
+    Items: D2AbsentFields[]
+}
+
 // ---- D3: null binary with no omit choice ----
 
 [<CLIMutable>]
