@@ -184,7 +184,7 @@ module ExpressionWriter =
                 
                 match ofType with
                 | t when t = typeof<string> -> Expression.Convert(valueExpr, typeof<BsonString>) :> Expression |> nullCheck  
-                // Null binary guard (US-004.AC-4, AC-5; known defect D3 / DEC-000-15).
+                // Null binary guard (US-004.AC-4, AC-5; known defect D3 / DEC-000-15; fixed per DEC-001-3).
                 // This branch used to build BsonBinaryData unguarded, so a null byte array failed the write with
                 // "Value cannot be null. (Parameter 'bytes')" unless "omit when null" / "omit when default" left the
                 // member out, and a null element of a byte-array array or a null dictionary value always failed (no
@@ -249,7 +249,7 @@ module ExpressionWriter =
             Expression.Property(valueExr, "IsSome")
                             
         let getChecker(pr: PropertyInfo) =
-            // Omission on/off argument (US-007.AC-4; known defect D4 / DEC-000-17).
+            // Omission on/off argument (US-007.AC-4; known defect D4 / DEC-000-17; fixed per DEC-001-4).
             // Only the presence of BsonIgnoreIfDefault used to be checked, so BsonIgnoreIfDefault(false) still left
             // the member out when it was equal to its default. The attribute now counts only when its Value is true;
             // switched off, the member is treated as if the attribute were absent, so the remaining rules apply
@@ -283,7 +283,7 @@ module ExpressionWriter =
             objType.GetProperties(BindingFlags.Instance + BindingFlags.Public)
             |> Array.filter (fun p -> p.GetCustomAttribute<BsonIgnoreAttribute>() = null)
 
-        // Duplicate stored-name guard (US-005.AC-3; known defect D1 / DEC-000-3).
+        // Duplicate stored-name guard (US-005.AC-3; known defect D1 / DEC-000-3; fixed per DEC-001-1).
         // Every member that is not [<BsonIgnore>] is stored under getNameInBson: its BsonElement name, or the property name.
         // Two members resolving to one stored name (two equal BsonElement names, or a BsonElement name equal to another
         // property's name) used to pass creation, and then every whole-document write of the type failed with

@@ -17,7 +17,7 @@ type ExpressionDocumentSerializer<'t>() =
     let reader = ExpressionReader.CreateReader<'t>().Invoke
     let writer = ExpressionWriter.CreateWriter<'t>().Invoke
     
-    // Member cache, safe for simultaneous first use (US-009.AC-8, US-010.AC-6; known defect D7 / DEC-000-33).
+    // Member cache, safe for simultaneous first use (US-009.AC-8, US-010.AC-6; known defect D7 / DEC-000-33; fixed per DEC-001-7).
     // One registered instance serves every request in the process, and the store asks it for members on the request
     // thread. This used to be a plain Dictionary filled with Add, with no lock: requests that first used members of
     // the type at the same moment failed with "An item with the same key has already been added" or a
@@ -35,7 +35,7 @@ type ExpressionDocumentSerializer<'t>() =
         BsonDocumentSerializer.Instance.Serialize<BsonDocument>(context, doc)
 
     
-    // Declared enumeration form inside wrappers (US-009.AC-7, US-010.AC-5; known defect D5 / DEC-000-29).
+    // Declared enumeration form inside wrappers (US-009.AC-7, US-010.AC-5; known defect D5 / DEC-000-29; fixed per DEC-001-5).
     // The whole-document writer stores an enumeration in the member's BsonRepresentation form at any wrapper level
     // (option, value option, nullable, array element), or as a 32-bit number when none is declared. Typed filters and
     // updates used to take the inner serializer from the registry, which knows nothing about the member's attribute,
@@ -147,7 +147,7 @@ type ExpressionDocumentSerializer<'t>() =
     interface IBsonDocumentSerializer with
         member this.TryGetMemberSerializationInfo(memberName, serializationInfo) =
             
-            // Stored names and exclusion (US-009.AC-6, US-010.AC-3, US-010.AC-4; known defect D6 / DEC-000-30).
+            // Stored names and exclusion (US-009.AC-6, US-010.AC-3, US-010.AC-4; known defect D6 / DEC-000-30; fixed per DEC-001-6).
             // Every answer used to carry the property's own name and excluded members were translated too, so filters
             // missed renamed fields, updates wrote under the wrong name, and an excluded member could be filtered on or
             // updated. The answer now carries the stored name from ExpressionWriter.getNameInBson (the rule whole-document

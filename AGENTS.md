@@ -2,13 +2,13 @@
 
 <!-- agent-ready:start -->
 
-`Iezious.Libs.BSONExpressionSerializer` is a published F# class library (NuGet package ID `Iezious.Libs.BSONExpressionSerializer`, v1.0.11, `net6.0`) that provides compile-once, reflection-free MongoDB BSON (de)serialization for F# domain types. At construction time it uses `System.Linq.Expressions` to build and `.Compile()` a typed `Func<BsonDocument,'T>` (reader) and `Func<'T,BsonDocument>` (writer) for any record type `'T`. Every subsequent read/write invokes the compiled delegate directly — no per-call reflection. The primary export `ExpressionDocumentSerializer<'T>` implements MongoDB's `IBsonSerializer<'T>` and `IBsonDocumentSerializer`, making registered types fully compatible with `ExpressionFilterDefinition` and the LINQ layer. Three standalone helper serializers for `Nullable<_>`, `ValueOption<_>`, and `Option<_>` are also exported. This library is the deepest leaf in the SIN .NET dependency tree — it consumes nothing inside the monorepo and is consumed by 5 in-network services.
+`Iezious.Libs.BSONExpressionSerializer` is a published F# class library (NuGet package ID `Iezious.Libs.BSONExpressionSerializer`, version from the release tag, `net10.0`) that provides compile-once, reflection-free MongoDB BSON (de)serialization for F# domain types. At construction time it uses `System.Linq.Expressions` to build and `.Compile()` a typed `Func<BsonDocument,'T>` (reader) and `Func<'T,BsonDocument>` (writer) for any record type `'T`. Every subsequent read/write invokes the compiled delegate directly — no per-call reflection. The primary export `ExpressionDocumentSerializer<'T>` implements MongoDB's `IBsonSerializer<'T>` and `IBsonDocumentSerializer`, making registered types fully compatible with `ExpressionFilterDefinition` and the LINQ layer. Three standalone helper serializers for `Nullable<_>`, `ValueOption<_>`, and `Option<_>` are also exported. This library is the deepest leaf in the SIN .NET dependency tree — it consumes nothing inside the monorepo and is consumed by 5 in-network services.
 
 ## Stack
 
-- F# / `net6.0` class library
-- `FSharp.Core` 6.0.3 (pinned in library; overridden by consumers at restore time — all active consumers target `net8.0`)
-- `MongoDB.Bson` 2.19.2
+- F# / `net10.0` class library
+- `FSharp.Core` 10.1.300 (pinned in the library; it is the package's minimum, see `docs/decisions/000.legacy.md` DEC-000-42)
+- `MongoDB.Bson` 3.8.1 (published as a minimum, DEC-000-41)
 
 ## Build & test
 
@@ -36,7 +36,7 @@ Publication is tag-driven via GitHub Actions (`.github/workflows/release.yml`, t
 
 ## Architecture documentation
 
-- Service-level: `docs/architecture/overview.md` — purpose, expression-tree approach, BSON attribute support, consumer registration pattern, consumers table, publication mechanics, and 10 known anomalies
+- Service-level: `docs/architecture/overview.md` — purpose, expression-tree approach, BSON attribute support, consumer registration pattern, consumers, failure model, compatibility (including the behaviour changed by the defect fixes) and distribution
 - Service-level: `docs/architecture/interfaces.md` — all exported public types and modules with signatures, and reader/writer type-handling matrices
 - Network-level (cross-service): `D:/GitRoot/_SIN/docs/architecture/overview.md`, `services.md`, `cross-service.md`
 
@@ -49,8 +49,8 @@ The legacy-root aggregated index at `D:/GitRoot/_SIN/docs/.helpers/` remains ava
 ## Agent guidance
 
 - `ExpressionDocumentSerializer<'T>` is the primary contract surface (see `docs/architecture/interfaces.md`). This package is consumed by 5 in-network services (`SinSystems.APIV2`, `SinSystem.BackOffice`, `SinSystems.Dogma` x2, `SINSystem.Migrator`). Any breaking API change is a cross-service change — coordinate with consumers before merging.
-- `docs/architecture/overview.md` documents 10 known anomalies (dead code, missing null guard, empty stub, etc.). These are known and intentional — do not "clean up" any of them without a deliberate PR reviewed against all 5 consumers.
-- Tests exist in `test/BSONExpressionSerializerTests/` (NUnit, 6 test files) but coverage gaps are unknown — the harvester did not read the test files.
+- `docs/decisions/` records every technical choice: `000.legacy.md` holds the pre-existing system (known limits and unused surface are kept on purpose — do not "clean up" any of them without a deliberate PR reviewed against all 5 consumers); `001.known-defects.md` holds the fixes for the reviewed defects D1–D9, which supersede the matching legacy entries. `index.md` lists every entry with its status.
+- Tests live in `test/BSONExpressionSerializerTests/` (NUnit). `PostReviewTests.fs` holds the regression guards for D1–D9, one section per defect.
 - The NuGet publish target is the `iezious` personal GitHub org (`nuget.pkg.github.com/iezious`), distinct from the `sinsystems` org used by other SIN libraries. A `GITHUB_TOKEN` / `NUGET_TOKEN` scoped to the `iezious` org is required at restore time.
 
 <!-- agent-ready:end -->

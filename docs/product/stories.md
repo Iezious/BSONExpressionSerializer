@@ -95,7 +95,8 @@ Actors are system actors (`system/ACT-###`).
   - **US-007.AC-3** — Given a field left out at its default, when the document is loaded, then the field holds that default.
   - **US-007.AC-4** — Given a field with "omit when default" switched off, when it is stored at its default, then the field is present in the document.
   - **US-007.AC-5** — Given a field marked with both choices and no value, when it is stored, then the field is absent from the document.
-- **Source:** `[observed]` I-04 notes § Product, I-11 notes § Product (AC-1–AC-3, AC-5); `[confirmed: user]` interview 2026-11-14 § Wave 1 (AC-4)
+  - **US-007.AC-6** — Given a field with "omit when null" switched off, when it is stored with no value, then the field is present in the document.
+- **Source:** `[observed]` I-04 notes § Product, I-11 notes § Product (AC-1–AC-3, AC-5); `[confirmed: user]` interview 2026-11-14 § Wave 1 (AC-4); `[confirmed: user]` request 2026-11-17 (AC-6)
 
 ### US-008 — Store an enumeration as a number or by name
 - **Feature:** FEAT-003 · **Actor:** system/ACT-014 · **Realizes:** UC-008

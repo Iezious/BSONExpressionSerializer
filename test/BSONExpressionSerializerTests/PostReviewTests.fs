@@ -4,6 +4,8 @@ namespace BSONExpressionSerializerTests
 // Every test asserts the INTENDED behaviour (the cited story / acceptance criterion). Each defect test was written to
 // fail against the code as reviewed and passes since its fix; the guards marked "Must hold before and after the fix"
 // held throughout.
+// Each defect Dn is fixed per DEC-001-n in docs/decisions/001.known-defects.md, which supersedes the DEC-000 entry cited in
+// the section header.
 // The defect descriptions are copied verbatim from the review findings. "Today" describes the code as reviewed and
 // the "Where" line numbers point into that version, not the current one.
 // All source paths are under `src/Iezious.Libs.BSONExpressionSerializer/` unless they start with `.github/`.

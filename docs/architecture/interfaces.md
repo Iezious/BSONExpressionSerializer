@@ -7,14 +7,14 @@ The public contract consumers depend on: the document serializer, its registrati
 
 ## Document serializer
 
-`ExpressionDocumentSerializer<'T>`, defined at `src/Iezious.Libs.BSONExpressionSerializer/ExpressionDocumentSerializer.fs:12`.
+`ExpressionDocumentSerializer<'T>`, defined at `src/Iezious.Libs.BSONExpressionSerializer/ExpressionDocumentSerializer.fs:13`.
 
 - It has a parameterless constructor and no constraint on the type parameter.
 - It implements the BSON library's serializer contracts `IBsonSerializer<'T>` and `IBsonDocumentSerializer`. These are the extension point consumers rely on.
 - It does not implement the BSON library's identity-provider contract. The driver therefore never reads, assigns or generates an identity for a registered type (see `../decisions/000.legacy.md` DEC-000-26).
 - One instance per type serves every concurrent request in the process (`overview.md` section Failure model).
 - It serves whole-document serialize and deserialize for `'T`.
-- It supplies member information for typed filters and updates. The interface member is defined at `src/Iezious.Libs.BSONExpressionSerializer/ExpressionDocumentSerializer.fs:110`.
+- It supplies member information for typed filters and updates. The interface member is defined at `src/Iezious.Libs.BSONExpressionSerializer/ExpressionDocumentSerializer.fs:148`.
 
 ## Registration contract
 
@@ -35,7 +35,7 @@ The public contract consumers depend on: the document serializer, its registrati
 
 ## Stored form, by type family
 
-- **Document layout:** a type becomes one document with one field per public instance property. Properties marked `BsonIgnore` are skipped. The field name is the property name, or the `BsonElement` name when one is given.
+- **Document layout:** a type becomes one document with one field per public instance property. Properties marked `BsonIgnore` are skipped. The field name is the property name, or the `BsonElement` name when one is given. Two members with the same stored name refuse the type at creation (see `../decisions/001.known-defects.md` DEC-001-1).
   - The document identity is the field whose stored name is `_id`: a property named `_id`, or one whose `BsonElement` name is `_id`. `BsonId` does not select it (known limit; see `../decisions/000.legacy.md` DEC-000-26). The library never supplies or generates an identity: the writing service sets it.
   - No type marker is written. A registration or member whose declared type is a parent stores only the declared type's members and loads as the declared type, so a subtype's extra fields are lost (known limit; DEC-000-27).
 - **Scalars:** string, bool, 32- and 64-bit integers, double, decimal, Decimal128 and ObjectId each map to the matching native BSON value. Any other scalar kind fails when the serializer is created, including inside optionals, arrays, maps and nested types (DEC-000-7).
@@ -60,9 +60,8 @@ The public contract consumers depend on: the document serializer, its registrati
 ## Read rules
 
 - A missing field never fails the read. The property takes its `BsonDefaultValue` if one is declared, is empty if it is an option or value option, and otherwise takes the type's default. The declared default applies only when the field is missing. A field stored as null does not take it. A field left out under either omission marker reads back as its default, not as null. So with both markers and a non-null declared default, a null value loads as the declared default.
-- A field stored as null reads as empty for option, value-option and nullable properties. It reads as no value for arrays, dictionaries, nested types, byte arrays and embedded raw documents (see `../decisions/000.legacy.md` DEC-000-14).
+- A field stored as null reads as empty for option, value-option and nullable properties. It reads as no value for text, arrays, dictionaries, nested types, byte arrays and embedded raw documents, at any depth: a nested type, an array element, a dictionary value (see `../decisions/000.legacy.md` DEC-000-14; text: `../decisions/001.known-defects.md` DEC-001-2).
   - For any other value-type property, a stored null fails the read.
-  - A plain text field stored as null also fails the read, at any depth (a nested type, an array element, a dictionary value), although the library writes that form (known defect; DEC-000-15).
 - Unknown fields in the document are ignored. They are not kept, so writing back a value read this way drops them (DEC-000-13).
 - No numeric conversion is made, with one exception: 64-bit integer and double properties accept values stored as 32-bit integers. A value stored in any other numeric kind than the property's fails the read (DEC-000-23).
   - Enumerations stored as numbers are read only in the number kind their form declares.
@@ -73,17 +72,17 @@ The public contract consumers depend on: the document serializer, its registrati
 ## Write rules
 
 - An empty option or value-option field is left out. An omission marker replaces this rule. An option field with `BsonIgnoreIfDefault` and a declared default stores an empty value as null, and never leaves out the declared value (see `../decisions/000.legacy.md` DEC-000-17, DEC-000-18).
-- `BsonIgnoreIfNull` omits a null value. On a nullable field it omits an empty value. Its on/off argument is not read, so switching it off has no effect (known limit; `../decisions/000.legacy.md` DEC-000-25).
+- `BsonIgnoreIfNull` omits a null value. On a nullable field it omits an empty value. Switched off, it has no effect, and the field follows the remaining rules (see `../decisions/001.known-defects.md` DEC-001-4).
   - It applies only to fields that can hold null: text, binary, raw document, nested type, map, array, option, nullable.
-  - On any other kind, value option included, creating the serializer fails. This holds for members of nested types and array element types too (known limit; DEC-000-3).
+  - Switched on, on any other kind, value option included, creating the serializer fails. This holds for members of nested types and array element types too (known limit; DEC-000-3).
 - `BsonIgnoreIfDefault` omits a value equal to the default. The default is the `BsonDefaultValue` value if one is declared.
   - Equal to the default means equal by value for numbers, flags, dates, enumerations, text and nullable numbers.
   - For nested types, maps, arrays and raw documents, the default is null unless an array default is declared, and only an absent value matches. An empty map, array or nested value is written, and a declared array default never matches (known limit; DEC-000-18).
-  - On a value-option field, creating the serializer fails (known limit; DEC-000-3).
-  - Its on/off argument is not read, so the attribute set to off still omits (known defect; DEC-000-17).
+  - Switched on, on a value-option field, creating the serializer fails (known limit; DEC-000-3).
+  - Switched off, it has no effect, and the field follows the remaining rules (DEC-001-4).
   - A declared default must convert to the field type, or creating the serializer fails (DEC-000-12).
 - The two attributes combine.
-- Every other property is always written, and a null is written as BSON null. The exception is a null byte array: writing it fails unless `BsonIgnoreIfNull` or `BsonIgnoreIfDefault` omits it (known defect; DEC-000-15). A null byte array inside an array always fails, because no attribute can omit an element.
+- Every other property is always written, and a null is written as BSON null, at any depth. This includes a null byte array, a null element of an array of byte arrays and a null dictionary value (DEC-001-2, DEC-001-3).
 
 ## Mapping attributes
 
@@ -91,22 +90,23 @@ The attribute names are public contract.
 
 - **Honoured:** `BsonElement`, `BsonIgnore`, `BsonDefaultValue`, `BsonRepresentation` (enums), `BsonIgnoreIfNull`, `BsonIgnoreIfDefault`.
   - `BsonRepresentation` acts only on enum members, in the 32-bit integer, 64-bit integer and name forms.
-  - Not read on the honoured attributes: the `Order` of `BsonElement`; `AllowOverflow` and `AllowTruncation` of `BsonRepresentation`; the on/off argument of `BsonIgnoreIfDefault` and of `BsonIgnoreIfNull` (see `../decisions/000.legacy.md` DEC-000-25, DEC-000-17).
+  - Not read on the honoured attributes: the `Order` of `BsonElement`; `AllowOverflow` and `AllowTruncation` of `BsonRepresentation` (see `../decisions/000.legacy.md` DEC-000-25). The on/off argument of `BsonIgnoreIfDefault` and of `BsonIgnoreIfNull` is read (DEC-001-4).
   - `BsonDefaultValue` on a `BsonIgnore`d member has no effect.
 - **Ignored without error:** every other mapping attribute, on a member or on the type (DEC-000-25). This includes `BsonId`, `BsonRequired`, `BsonConstructor`, `BsonFactoryMethod`, `BsonExtraElements`, `BsonIgnoreExtraElements`, `BsonSerializer`, `BsonGuidRepresentation`, `BsonDateTimeOptions`, `BsonTimeSpanOptions`, `BsonDictionaryOptions`, `BsonDiscriminator`, `BsonKnownTypes` and `BsonNoId`.
 
 ## Typed filters and updates
 
+- Concurrent first use of members is safe (DEC-001-7).
 - Member information covers only the type's own properties. A path into a nested type is translated one segment at a time, by that nested type's own handling in the driver (see `../decisions/000.legacy.md` DEC-000-31).
   - A registered nested type uses its stored form. A nested type that is not registered falls to the driver's default mapping. There, optional values differ from the stored form, and so do enumerations without a declared form when the service sets a by-name rule for all types. Filters then do not match, and updates leave records that cannot be loaded.
   - A field of a nested type held in an optional value cannot be reached; translation is refused (known limit; DEC-000-31).
 - The driver asks for member information for sorts too, and whenever a filter, update or sort names a field as text.
-- Translation targets the property's own name, even when a `BsonElement` name is declared, and it also translates `BsonIgnore`d members (known defect; DEC-000-30). For a nested type that is not registered, the default mapping applies the stored name.
+- Translation targets the stored name: the `BsonElement` name when one is declared, otherwise the property name, as in whole-document storage. A `BsonIgnore`d member gets no member information, so a filter, update or sort on it is refused when it is built (see `../decisions/001.known-defects.md` DEC-001-6). For a nested type that is not registered, the default mapping applies the stored name.
 - An enum member is translated in its declared form. For a form other than 32-bit integer, 64-bit integer or name, translation fails (DEC-000-20).
-- An enum inside an option, value option, nullable or array is stored in its declared representation, but its filter value is translated as a 32-bit integer. So a member-name representation there does not match in filters. An update stores the value as a number, and the read rules then refuse the record (known defect; DEC-000-29).
+- An enum inside an option, value option, nullable or array is translated in the field's declared form, like a top-level enum, so filters match and updates store the form the reader expects (DEC-001-5). An enum held as a dictionary value takes whatever the driver's registry holds for the dictionary.
 - Option and value-option members translate an empty value to null. A present value uses the driver's serializer for the inner type.
   - Nullable members use the BSON library's own nullable handling (DEC-000-29).
-  - Reading a single option or value-option member back fails on an explicit null (`overview.md` section Failure model; DEC-000-35).
+  - Reading a single option or value-option member back reads an explicit null as empty (`overview.md` section Failure model; DEC-001-8).
 - Any other member uses whatever the driver's registry holds for the member's type: this library's serializer for a registered nested type, otherwise the driver's default handling. Parity with the stored form therefore holds only where that handling equals this library's form.
   - It holds on the current store line. On the older store line, decimal and 128-bit decimal members translate as text (known limit; DEC-000-29; `overview.md` section Compatibility).
 - A field name the type does not have is passed to the driver unchanged, and its value takes the driver's default form.
@@ -115,8 +115,8 @@ The attribute names are public contract.
 
 Two public functions convert between a type and an in-memory raw document without registration:
 
-- `ExpressionReader.CreateReader<'T>()`, defined at `src/Iezious.Libs.BSONExpressionSerializer/ExpressionReader.fs:233`, returns a function from a raw document to `'T`.
-- `ExpressionWriter.CreateWriter<'T>()`, defined at `src/Iezious.Libs.BSONExpressionSerializer/ExpressionWriter.fs:283`, returns a function from `'T` to a raw document.
+- `ExpressionReader.CreateReader<'T>()`, defined at `src/Iezious.Libs.BSONExpressionSerializer/ExpressionReader.fs:240`, returns a function from a raw document to `'T`.
+- `ExpressionWriter.CreateWriter<'T>()`, defined at `src/Iezious.Libs.BSONExpressionSerializer/ExpressionWriter.fs:332`, returns a function from `'T` to a raw document.
 
 Rules:
 
@@ -137,7 +137,7 @@ Rules:
 
 Public, but not supported: no guarantee is stated for it, and it is kept rather than removed. Of these, only the conversion operators are used by in-repo services. All public names live in the namespace `Iezious.Libs.BSONExpressionSerializer`.
 
-- **Optional-value member serializers:** `NullableSerializer`, `ValueOptionSerializer` and `OptionSerializer`, defined at `src/Iezious.Libs.BSONExpressionSerializer/HelperSerializers.fs:7`, `:34` and `:60`. Member translation uses the value-option and option serializers. `NullableSerializer` is used by nothing, including the library (see `../decisions/000.legacy.md` DEC-000-37).
+- **Optional-value member serializers:** `NullableSerializer`, `ValueOptionSerializer` and `OptionSerializer`, defined at `src/Iezious.Libs.BSONExpressionSerializer/HelperSerializers.fs:16`, `:43` and `:71`. Member translation uses the value-option and option serializers. `NullableSerializer` is used by nothing, including the library (see `../decisions/000.legacy.md` DEC-000-37).
 - **Reader override registry** (`ExpressionReaderRegistry.Add`, `Get`; `src/Iezious.Libs.BSONExpressionSerializer/ExpressionReaderRegistry.fs:11`, `:14`): a process-wide, add-only registry from a type to a document-to-value function. `Get` returns the added function, or else one that reads through the driver's own handling of the type. A second `Add` for a type is refused. No conversion in this library consults it, whether registered, nested or stand-alone. Abandoned (DEC-000-36).
 - **Conversion operators:** the `Utils` module, defined at `src/Iezious.Libs.BSONExpressionSerializer/Utils.fs:5-8`.
   - It is not opened with the namespace: a caller opens `Utils` after opening the namespace, or qualifies the names.
@@ -145,8 +145,8 @@ Public, but not supported: no guarantee is stated for it, and it is kept rather 
   - The shared Utils library holds the master copy of these definitions (DEC-000-39).
   - In-repo users: the library's tests, and BackOffice and the Migrator, which reach this copy by opening `Utils` after this namespace.
 - **Unused leftovers and test hooks**, public but not supported:
-  - the builders `ExpressionReader.buildReader` (`src/Iezious.Libs.BSONExpressionSerializer/ExpressionReader.fs:20`) and `ExpressionWriter.build` (`src/Iezious.Libs.BSONExpressionSerializer/ExpressionWriter.fs:40`), called from outside the library only by its own tests (DEC-000-38);
-  - two unused functions, `ExpressionReaderRegistry.proto` (`src/Iezious.Libs.BSONExpressionSerializer/ExpressionReaderRegistry.fs:21`) and `ExpressionWriter.privateIgnoreDefault` (`src/Iezious.Libs.BSONExpressionSerializer/ExpressionWriter.fs:30`) (DEC-000-37);
+  - the builders `ExpressionReader.buildReader` (`src/Iezious.Libs.BSONExpressionSerializer/ExpressionReader.fs:20`) and `ExpressionWriter.build` (`src/Iezious.Libs.BSONExpressionSerializer/ExpressionWriter.fs:42`), called from outside the library only by its own tests (DEC-000-38);
+  - two unused functions, `ExpressionReaderRegistry.proto` (`src/Iezious.Libs.BSONExpressionSerializer/ExpressionReaderRegistry.fs:21`) and `ExpressionWriter.privateIgnoreDefault` (`src/Iezious.Libs.BSONExpressionSerializer/ExpressionWriter.fs:32`) (DEC-000-37);
   - the empty module `ExpressionStreamReader` (`src/Iezious.Libs.BSONExpressionSerializer/ExpressionStreamReader.fs:5`) (DEC-000-10).
 
 ## Model coupling

@@ -132,14 +132,14 @@ Actors are system actors (`system/ACT-###`).
   - A1 — With both choices on one field, it is left out when it has no value or when it is at its default.
   - A2 — When the developer switches "omit when default" off, the field is stored at its default.
   - A3 — A value that is empty but present, such as empty text or an empty list, is stored under "omit when null".
+  - A4 — When the developer switches "omit when null" off, a field with no value is stored empty.
 - **Exception flows:**
-  - E1 — **Known limit.** These combinations make registration refuse the type when the service starts:
+  - E1 — **Known limit.** These combinations, switched on, make registration refuse the type when the service starts:
     - "omit when null" on a field that can never be empty: a number, flag, moment, document identity, enumeration or inline optional value;
     - "omit when default" on an inline optional value.
   - E2 — **Known limit.** For nested parts, lists, maps and binary content, only an absent value counts as the default. An empty list, or a nested part whose fields are all empty, is stored.
   - E3 — A typed filter for a field's default value does not match documents in which that field was left out.
-  - E4 — **Known limit.** Switching "omit when null" off has no effect: the field is still left out when it has no value.
-- **Source:** `[observed]` I-04 notes § Product, I-11 notes § Product (both main flows, A1, A3, E3); `[confirmed: user]` interview 2026-11-14 § Wave 1 (A2, E1, E2), § Checkpoint (E4)
+- **Source:** `[observed]` I-04 notes § Product, I-11 notes § Product (both main flows, A1, A3, E3); `[confirmed: user]` interview 2026-11-14 § Wave 1 (A2, E1, E2); `[confirmed: user]` request 2026-11-17 (A4)
 
 ### UC-008 — Store an enumeration as a number or by name
 - **Feature:** FEAT-003 · **Actor:** system/ACT-014

@@ -149,7 +149,7 @@ module ExpressionReader =
 
             and readValue (ofType:Type) (bsonExpr: Expression) : Expression =
                 match ofType with
-                // Null text guard (US-004.AC-3; known defect D2 / DEC-000-15).
+                // Null text guard (US-004.AC-3; known defect D2 / DEC-000-15; fixed per DEC-001-2).
                 // The writer stores a text member with no value as an explicit BSON null, but this branch used to read
                 // AsString unguarded, so the library could not read back its own documents: a stored null failed the
                 // load with "Unable to cast ... 'BsonNull' to type 'BsonString'". Text now goes through nullSafe, like

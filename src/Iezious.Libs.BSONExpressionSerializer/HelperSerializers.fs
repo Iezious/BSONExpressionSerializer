@@ -4,7 +4,7 @@ open System
 open MongoDB.Bson
 open MongoDB.Bson.Serialization
 
-// Explicit null is consumed (US-004.AC-8, US-004.AC-9; known defect D8 / DEC-000-35).
+// Explicit null is consumed (US-004.AC-8, US-004.AC-9; known defect D8 / DEC-000-35; fixed per DEC-001-8).
 // When the stored value was an explicit null, Deserialize used to return the empty value without reading the null, so
 // the reader stayed on the value: the next ReadName / ReadEndDocument / array element failed with "... can only be
 // called when State is ..., not when State is Value". That broke reads of a single optional member (a projection to
