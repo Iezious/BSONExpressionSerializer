@@ -43,6 +43,11 @@ type private Render =
         ExpressionFilterDefinition<'t>(f)
             .Render(RenderArgs<'t>(serializer, BsonSerializer.SerializerRegistry))
 
+    static member SetWith<'t, 'v>(serializer: IBsonSerializer<'t>, field: Expression<Func<'t, 'v>>, value: 'v) : BsonValue =
+        UpdateDefinitionBuilder<'t>()
+            .Set(field, value)
+            .Render(RenderArgs<'t>(serializer, BsonSerializer.SerializerRegistry))
+
     static member SortAscending<'t>(field: Expression<Func<'t, obj>>) : BsonDocument =
         SortDefinitionBuilder<'t>()
             .Ascending(field)
@@ -767,6 +772,123 @@ module KnownDefectTests =
             workers |> Array.iter (fun t -> t.Join())
 
         Assert.That(failures, Is.Empty, $"{failures.Count} failures, first: {failures |> Seq.tryHead}")
+
+    // ---------------------------------------------------------------------
+    // D7 (extension) — the same race through the paths services use, and what must hold after it.
+    // ---------------------------------------------------------------------
+
+    /// Runs one round per iteration: newRound() creates fresh state (a new serializer, so every member is unresolved)
+    /// and returns the per-thread work; all threads are released together by a barrier. Returns every failure seen.
+    let private race (iterations: int) (threads: int) (newRound: unit -> (int -> unit)) : string list =
+        let failures = ConcurrentBag<string>()
+        for _ in 1 .. iterations do
+            let work = newRound ()
+            use barrier = new Barrier(threads)
+            let workers =
+                [| for t in 0 .. threads - 1 ->
+                    Thread(fun () ->
+                        barrier.SignalAndWait()
+                        try work t
+                        with ex -> failures.Add($"{ex.GetType().Name}: {ex.Message}")) |]
+            workers |> Array.iter (fun t -> t.Start())
+            workers |> Array.iter (fun t -> t.Join())
+        List.ofSeq failures
+
+    let private newD7Serializer () = ExpressionDocumentSerializer<D7ManyFields>() :> IBsonSerializer<D7ManyFields>
+
+    let private failureSummary (failures: string list) =
+        $"{failures.Length} failures, first: {List.tryHead failures}"
+
+    [<Test>]
+    let ``D7 simultaneous first filters on one serializer always succeed``() =
+        let filters : (IBsonSerializer<D7ManyFields> -> BsonDocument) list = [
+            fun s -> Render.FilterWith<D7ManyFields>(s, fun f -> f.F01 = "a")
+            fun s -> Render.FilterWith<D7ManyFields>(s, fun f -> f.F02 = "b")
+            fun s -> Render.FilterWith<D7ManyFields>(s, fun f -> f.F05 = 5)
+            fun s -> Render.FilterWith<D7ManyFields>(s, fun f -> f.F06 > 6)
+            fun s -> Render.FilterWith<D7ManyFields>(s, fun f -> f.F09 = 9L)
+            fun s -> Render.FilterWith<D7ManyFields>(s, fun f -> f.F10 < 10L)
+            fun s -> Render.FilterWith<D7ManyFields>(s, fun f -> f.F13 = true)
+            fun s -> Render.FilterWith<D7ManyFields>(s, fun f -> f.F15 = 1.5)
+        ]
+        let failures =
+            race 100 8 (fun () ->
+                let ser = newD7Serializer ()
+                fun _ -> for render in filters do render ser |> ignore)
+        Assert.That(failures, Is.Empty, failureSummary failures)
+
+    [<Test>]
+    let ``D7 simultaneous first updates on one serializer always succeed``() =
+        let updates : (IBsonSerializer<D7ManyFields> -> BsonValue) list = [
+            fun s -> Render.SetWith<D7ManyFields, string>(s, _.F01, "a")
+            fun s -> Render.SetWith<D7ManyFields, string>(s, _.F02, "b")
+            fun s -> Render.SetWith<D7ManyFields, int32>(s, _.F05, 5)
+            fun s -> Render.SetWith<D7ManyFields, int32>(s, _.F06, 6)
+            fun s -> Render.SetWith<D7ManyFields, int64>(s, _.F09, 9L)
+            fun s -> Render.SetWith<D7ManyFields, int64>(s, _.F10, 10L)
+            fun s -> Render.SetWith<D7ManyFields, bool>(s, _.F13, true)
+            fun s -> Render.SetWith<D7ManyFields, float>(s, _.F15, 1.5)
+        ]
+        let failures =
+            race 100 8 (fun () ->
+                let ser = newD7Serializer ()
+                fun _ -> for render in updates do render ser |> ignore)
+        Assert.That(failures, Is.Empty, failureSummary failures)
+
+    [<Test>]
+    let ``D7 threads racing on first use all get the same answer for a member``() =
+        let names = typeof<D7ManyFields>.GetProperties() |> Array.map (fun p -> p.Name)
+        let mismatches = ConcurrentBag<string>()
+        let failures =
+            race 200 8 (fun () ->
+                let ser = ExpressionDocumentSerializer<D7ManyFields>() :> IBsonDocumentSerializer
+                let answers = ConcurrentBag<string * BsonSerializationInfo>()
+                let pending = ref 8
+                fun _ ->
+                    for name in names do
+                        let ok, info = ser.TryGetMemberSerializationInfo(name)
+                        if ok then answers.Add((name, info))
+                    // the last thread to finish compares the answers of the round
+                    if Interlocked.Decrement(&pending.contents) = 0 then
+                        for name, infos in answers |> Seq.groupBy fst do
+                            let serializers = infos |> Seq.map (snd >> _.Serializer) |> Seq.distinctBy LanguagePrimitives.PhysicalHash |> Seq.length
+                            let elementNames = infos |> Seq.map (snd >> _.ElementName) |> Seq.distinct |> Seq.length
+                            if serializers > 1 || elementNames > 1 then
+                                mismatches.Add($"{name}: {serializers} serializer instances, {elementNames} element names"))
+        Assert.That(failures, Is.Empty, failureSummary failures)
+        Assert.That(mismatches, Is.Empty, $"{mismatches.Count} mismatches, first: {mismatches |> Seq.tryHead}")
+
+    [<Test>]
+    let ``D7 after a race on first use every member still resolves``() =
+        let names = typeof<D7ManyFields>.GetProperties() |> Array.map (fun p -> p.Name)
+        let afterwards = ConcurrentBag<string>()
+        let _ =
+            race 200 8 (fun () ->
+                let ser = ExpressionDocumentSerializer<D7ManyFields>() :> IBsonDocumentSerializer
+                let pending = ref 8
+                fun _ ->
+                    try
+                        for name in names do ser.TryGetMemberSerializationInfo(name) |> ignore
+                    finally
+                        // the last thread to finish checks the serializer once the race is over
+                        if Interlocked.Decrement(&pending.contents) = 0 then
+                            for name in names do
+                                try
+                                    let ok, info = ser.TryGetMemberSerializationInfo(name)
+                                    if not ok || isNull info then afterwards.Add($"{name}: not resolved after the race")
+                                with ex ->
+                                    afterwards.Add($"{name}: {ex.GetType().Name} after the race: {ex.Message}"))
+        Assert.That(afterwards, Is.Empty, $"{afterwards.Count} failures after the race, first: {afterwards |> Seq.tryHead}")
+
+    // Must hold before and after the fix.
+
+    [<Test>]
+    let ``D7 a member resolved once is answered from the cache with the same serializer``() =
+        let ser = ExpressionDocumentSerializer<D7ManyFields>() :> IBsonDocumentSerializer
+        let _, first = ser.TryGetMemberSerializationInfo("F01")
+        let _, second = ser.TryGetMemberSerializationInfo("F01")
+        Assert.That(Object.ReferenceEquals(first.Serializer, second.Serializer), Is.True)
+        Assert.That(second.ElementName, Is.EqualTo "F01")
 
     // =====================================================================
     // D8. Reading a single optional member fails on an explicit null (DEC-000-35)
