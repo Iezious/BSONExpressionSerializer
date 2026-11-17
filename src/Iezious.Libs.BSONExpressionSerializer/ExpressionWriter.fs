@@ -11,7 +11,9 @@ module ExpressionWriter =
     
     let inline private bval (v:Expression):Expression = Expression.Convert(v, typeof<BsonValue>)
     
-    let private getNameInBson(m:MemberInfo) =
+    // Internal (was private) so that ExpressionDocumentSerializer translates typed filters and updates to the same
+    // stored name as whole-document storage (D6).
+    let internal getNameInBson(m:MemberInfo) =
         match m.GetCustomAttribute<BsonElementAttribute>() with
         | null -> m.Name
         | attr when String.IsNullOrWhiteSpace(attr.ElementName) -> m.Name

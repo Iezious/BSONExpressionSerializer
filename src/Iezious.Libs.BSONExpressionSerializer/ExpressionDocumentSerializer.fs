@@ -58,13 +58,13 @@ type ExpressionDocumentSerializer<'t>() =
                 let serializerType = typedefof<EnumSerializer<BsonType>>.MakeGenericType(_member.PropertyType)
                 let serializer = Activator.CreateInstance(serializerType, representation ) :?> IBsonSerializer
                 propMap.Add(_member.Name, serializer)
-                true, BsonSerializationInfo(_member.Name, serializer, _member.PropertyType)
+                true, BsonSerializationInfo(ExpressionWriter.getNameInBson _member, serializer, _member.PropertyType)
             else
                 let representation = BsonType.Int32
                 let serializerType = typedefof<EnumSerializer<BsonType>>.MakeGenericType(_member.PropertyType)
                 let serializer = Activator.CreateInstance(serializerType, representation) :?> IBsonSerializer
                 propMap.Add(_member.Name, serializer)
-                true, BsonSerializationInfo(_member.Name, serializer, _member.PropertyType)
+                true, BsonSerializationInfo(ExpressionWriter.getNameInBson _member, serializer, _member.PropertyType)
         
         | _pt when _pt.IsGenericType && _pt.GetGenericTypeDefinition() = typeof<Nullable<_>>.GetGenericTypeDefinition() ->
             let underType = _pt.GetGenericArguments().[0]
@@ -74,7 +74,7 @@ type ExpressionDocumentSerializer<'t>() =
                 let serializerType = typedefof<NullableSerializer<_>>.MakeGenericType(underType)
                 let serializer = Activator.CreateInstance(serializerType, valueSerializer) :?> IBsonSerializer
                 propMap.Add(_member.Name, serializer)
-                true, BsonSerializationInfo(_member.Name, serializer, _member.PropertyType)
+                true, BsonSerializationInfo(ExpressionWriter.getNameInBson _member, serializer, _member.PropertyType)
             else
                 false, null
                 
@@ -86,7 +86,7 @@ type ExpressionDocumentSerializer<'t>() =
                 let serializerType = typedefof<ValueOptionSerializer<_>>.MakeGenericType(underType)
                 let serializer = Activator.CreateInstance(serializerType, valueSerializer) :?> IBsonSerializer
                 propMap.Add(_member.Name, serializer)
-                true, BsonSerializationInfo(_member.Name, serializer, _member.PropertyType)
+                true, BsonSerializationInfo(ExpressionWriter.getNameInBson _member, serializer, _member.PropertyType)
             else
                 false, null
                                 
@@ -98,7 +98,7 @@ type ExpressionDocumentSerializer<'t>() =
                 let serializerType = typedefof<OptionSerializer<_>>.MakeGenericType(underType)
                 let serializer = Activator.CreateInstance(serializerType, valueSerializer) :?> IBsonSerializer
                 propMap.Add(_member.Name, serializer)
-                true, BsonSerializationInfo(_member.Name, serializer, _member.PropertyType)
+                true, BsonSerializationInfo(ExpressionWriter.getNameInBson _member, serializer, _member.PropertyType)
             else
                 false, null
                     
@@ -109,13 +109,13 @@ type ExpressionDocumentSerializer<'t>() =
             let serializerType = typedefof<ArraySerializer<_>>.MakeGenericType(elementType)
             let serializer = Activator.CreateInstance(serializerType, innerSerializer _member elementType) :?> IBsonSerializer
             propMap.Add(_member.Name, serializer)
-            true, BsonSerializationInfo(_member.Name, serializer, _member.PropertyType)
+            true, BsonSerializationInfo(ExpressionWriter.getNameInBson _member, serializer, _member.PropertyType)
 
         | _pt ->
             let serializer = BsonSerializer.LookupSerializer(_member.PropertyType)
             if (serializer <> null) then
                 propMap.Add(_member.Name, serializer)
-                true, BsonSerializationInfo(_member.Name, serializer, _member.PropertyType)
+                true, BsonSerializationInfo(ExpressionWriter.getNameInBson _member, serializer, _member.PropertyType)
             else
                 false, null
     
@@ -139,11 +139,19 @@ type ExpressionDocumentSerializer<'t>() =
     interface IBsonDocumentSerializer with
         member this.TryGetMemberSerializationInfo(memberName, serializationInfo) =
             
+            // Stored names and exclusion (US-009.AC-6, US-010.AC-3, US-010.AC-4; known defect D6 / DEC-000-30).
+            // Every answer used to carry the property's own name and excluded members were translated too, so filters
+            // missed renamed fields, updates wrote under the wrong name, and an excluded member could be filtered on or
+            // updated. The answer now carries the stored name from ExpressionWriter.getNameInBson (the rule whole-document
+            // storage uses, BsonElement name or property name), on the first resolution and on cached answers alike, and an
+            // excluded member gets no answer, so the store refuses a filter, update or sort on it.
             match propMap.TryGetValue(memberName), typeof<'t>.GetProperty(memberName) with
             | _, null -> false
 
+            | _, _member when _member.GetCustomAttribute<BsonIgnoreAttribute>() <> null -> false
+
             | (true, _serializer), _member ->
-                serializationInfo <- BsonSerializationInfo(memberName, _serializer, _member.PropertyType)
+                serializationInfo <- BsonSerializationInfo(ExpressionWriter.getNameInBson _member, _serializer, _member.PropertyType)
                 true
             
             | _, _member ->

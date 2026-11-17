@@ -551,6 +551,19 @@ type D6RenamedAndExcluded = {
     Excluded: string
 }
 
+// D6 stored names on other member kinds: a by-name enumeration, an option, a blank BsonElement (falls back to the
+// property name, as in whole-document storage) and a plain member with no attribute.
+[<CLIMutable>]
+type D6RenamedKinds = {
+    [<BsonElement("e"); BsonRepresentation(BsonType.String)>]
+    Kind: TestEnum
+    [<BsonElement("o")>]
+    Opt: string option
+    [<BsonElement("")>]
+    Blank: string
+    Plain: int32
+}
+
 // ---- D7: concurrent first use of members ----
 
 [<CLIMutable>]

@@ -38,6 +38,16 @@ type private Render =
             .Set(field, value)
             .Render(RenderArgs<'t>(ExpressionDocumentSerializer<'t>(), BsonSerializer.SerializerRegistry))
 
+    /// Renders against a given serializer instance, so repeated renders go through its member cache.
+    static member FilterWith<'t>(serializer: IBsonSerializer<'t>, f: Expression<Func<'t, bool>>) : BsonDocument =
+        ExpressionFilterDefinition<'t>(f)
+            .Render(RenderArgs<'t>(serializer, BsonSerializer.SerializerRegistry))
+
+    static member SortAscending<'t>(field: Expression<Func<'t, obj>>) : BsonDocument =
+        SortDefinitionBuilder<'t>()
+            .Ascending(field)
+            .Render(RenderArgs<'t>(ExpressionDocumentSerializer<'t>(), BsonSerializer.SerializerRegistry))
+
 [<TestFixture>]
 module KnownDefectTests =
 
@@ -659,6 +669,67 @@ module KnownDefectTests =
     let ``D6 update on an excluded field stores no value``() =
         Assert.Catch(Action(fun () -> Render.Set<D6RenamedAndExcluded, string>((fun f -> f.Excluded), "x") |> ignore))
         |> ignore
+
+    [<Test>]
+    let ``D6 filter on a renamed field targets the stored name on every use of one serializer``() =
+        // The first use resolves the member; later uses are answered from the serializer's member cache.
+        let ser = ExpressionDocumentSerializer<D6RenamedAndExcluded>() :> IBsonSerializer<D6RenamedAndExcluded>
+        let first = Render.FilterWith<D6RenamedAndExcluded>(ser, fun f -> f.Name = "a")
+        let second = Render.FilterWith<D6RenamedAndExcluded>(ser, fun f -> f.Name = "b")
+        Assert.That(first.Contains "n", Is.True, $"first: {first}")
+        Assert.That(second.Contains "n", Is.True, $"second: {second}")
+        Assert.That(second.Contains "Name", Is.False, $"second: {second}")
+
+    [<Test>]
+    let ``D6 filter targets the same field name as a whole-document write``() =
+        let written = ExpressionWriter.CreateWriter<D6RenamedAndExcluded>().Invoke({ D6RenamedAndExcluded.Name = "a"; Count = 1; Excluded = "x" })
+        let b = Render.Filter<D6RenamedAndExcluded>(fun f -> f.Name = "a")
+        let filterField = b.Names |> Seq.exactlyOne
+        Assert.That(written.Contains filterField, Is.True, $"filter: {b}; written: {written}")
+
+    [<Test>]
+    let ``D6 update on a renamed field is loaded by the reader``() =
+        let u = Render.Set<D6RenamedAndExcluded, string>(_.Name, "changed")
+        let doc = BsonDocument([ BsonElement("Count", BsonInt32 1) ]).AddRange(u["$set"].AsBsonDocument)
+        let back = ExpressionReader.CreateReader<D6RenamedAndExcluded>().Invoke(doc)
+        Assert.That(back.Name, Is.EqualTo "changed", $"document: {doc}")
+
+    [<Test>]
+    let ``D6 sort on a renamed field targets the stored name``() =
+        let s = Render.SortAscending<D6RenamedAndExcluded>(fun f -> f.Name :> obj)
+        Assert.That(s.Contains "n", Is.True, $"rendered: {s}")
+        Assert.That(s.Contains "Name", Is.False, $"rendered: {s}")
+
+    [<Test>]
+    let ``D6 filter on a renamed by-name enum targets the stored name in its declared form``() =
+        let b = Render.Filter<D6RenamedKinds>(fun f -> f.Kind = TestEnum.OptionB)
+        Assert.That(b.Contains "e", Is.True, $"rendered: {b}")
+        Assert.That(b["e"].AsString, Is.EqualTo(nameof TestEnum.OptionB))
+
+    [<Test>]
+    let ``D6 filter and update on a renamed option target the stored name``() =
+        let b = Render.Filter<D6RenamedKinds>(fun f -> f.Opt = Some "x")
+        let u = Render.Set<D6RenamedKinds, string option>(_.Opt, Some "y")
+        Assert.That(b.Contains "o", Is.True, $"rendered: {b}")
+        Assert.That(u["$set"].AsBsonDocument.Contains "o", Is.True, $"rendered: {u}")
+
+    [<Test>]
+    let ``D6 filter on an excluded field is refused``() =
+        // An excluded member has no stored form, so there is nothing a filter on it could match.
+        Assert.Catch(Action(fun () -> Render.Filter<D6RenamedAndExcluded>(fun f -> f.Excluded = "x") |> ignore))
+        |> ignore
+
+    // Must hold before and after the fix.
+
+    [<Test>]
+    let ``D6 filter on a member with no stored name targets the property name``() =
+        let b = Render.Filter<D6RenamedKinds>(fun f -> f.Plain = 3)
+        Assert.That(b["Plain"].AsInt32, Is.EqualTo 3)
+
+    [<Test>]
+    let ``D6 filter on a member with a blank stored name targets the property name``() =
+        let b = Render.Filter<D6RenamedKinds>(fun f -> f.Blank = "x")
+        Assert.That(b["Blank"].AsString, Is.EqualTo "x")
 
     // =====================================================================
     // D7. Member resolution is not safe for simultaneous first use (DEC-000-33)
