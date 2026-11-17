@@ -247,6 +247,78 @@ module KnownDefectTests =
         Assert.That(back.Payloads[0], Is.EqualTo(box [| 1uy; 2uy |]))
         Assert.That(back.Payloads[1], Is.Null)
 
+    [<Test>]
+    let ``D3 null binary with no omit choice in a nested type and in array elements round-trips as null``() =
+        let value = {
+            D3BinaryNested.Name = "a"
+            Sub = { D3BinaryNoOmit.Name = "s"; Payload = null }
+            Items = [| { D3BinaryNoOmit.Name = "i"; Payload = null } |]
+        }
+        let doc, back = roundTrip value
+        Assert.That(doc["Sub"].["Payload"].IsBsonNull, Is.True, $"written: {doc}")
+        Assert.That(doc["Items"].AsBsonArray[0].["Payload"].IsBsonNull, Is.True, $"written: {doc}")
+        Assert.That(back.Sub.Payload, Is.Null)
+        Assert.That(back.Items[0].Payload, Is.Null)
+
+    [<Test>]
+    let ``D3 null binary as a dictionary value round-trips as null``() =
+        let dict = Dictionary<string, byte[]>()
+        dict["k"] <- null
+        let doc, back = roundTrip { D3BinaryDictionary.Name = "a"; Dict = dict }
+        Assert.That(doc["Dict"].["k"].IsBsonNull, Is.True, $"written: {doc}")
+        Assert.That(back.Dict.ContainsKey "k", Is.True)
+        Assert.That(back.Dict["k"], Is.Null)
+
+    [<Test>]
+    let ``D3 binary with a value and no omit choice is written and round-trips``() =
+        let doc, back = roundTrip { D3BinaryNoOmit.Name = "a"; Payload = [| 1uy; 2uy; 3uy |] }
+        Assert.That(doc["Payload"].BsonType, Is.EqualTo BsonType.Binary)
+        Assert.That(back.Payload, Is.EqualTo(box [| 1uy; 2uy; 3uy |]))
+
+    // ---------------------------------------------------------------------
+    // D3 (extension) — the same missing / absent / default behaviour as D2, for binary.
+    // With "omit when null" or "omit when default", a null binary creates no field and loads as null.
+    // An absent binary field (documents written before the field existed) loads as null.
+    // ---------------------------------------------------------------------
+
+    [<Test>]
+    let ``D3 omit-when-null leaves out a null binary and it loads as null``() =
+        let doc, back = roundTrip { TestClassBinaryData.Name = "a"; Payload = null }
+        Assert.That(doc.Contains "Payload", Is.False, $"written: {doc}")
+        Assert.That(back.Payload, Is.Null)
+
+    [<Test>]
+    let ``D3 omit-when-default leaves out a null binary in a nested type and in array elements``() =
+        let value = {
+            D3OmitNullBinaryNested.Name = "a"
+            Sub = { D2OmitNullBinary.Name = "s"; Value = null }
+            Items = [| { D2OmitNullBinary.Name = "i"; Value = null } |]
+        }
+        let doc, back = roundTrip value
+        Assert.That(doc["Sub"].AsBsonDocument.Contains "Value", Is.False, $"written: {doc}")
+        Assert.That(doc["Items"].AsBsonArray[0].AsBsonDocument.Contains "Value", Is.False, $"written: {doc}")
+        Assert.That(back.Sub.Value, Is.Null)
+        Assert.That(back.Items[0].Value, Is.Null)
+
+    [<Test>]
+    let ``D3 absent binary and absent binary array load as null``() =
+        let single = ExpressionReader.CreateReader<D3BinaryNoOmit>().Invoke(onlyName "a")
+        let many = ExpressionReader.CreateReader<D3ArrayOfBinary>().Invoke(onlyName "a")
+        Assert.That(single.Payload, Is.Null)
+        Assert.That(many.Payloads, Is.Null)
+
+    [<Test>]
+    let ``D3 absent binary loads as null in a nested type and in array elements``() =
+        let doc =
+            BsonDocument([
+                BsonElement("Name", BsonString "a")
+                BsonElement("Sub", onlyName "s")
+                BsonElement("Items", BsonArray([ onlyName "i" ]))
+            ])
+        let back = ExpressionReader.CreateReader<D3BinaryNested>().Invoke(doc)
+        Assert.That(back.Sub.Payload, Is.Null)
+        Assert.That(back.Items[0].Payload, Is.Null)
+
     // =====================================================================
     // D4. The omission attribute's on/off argument is ignored (DEC-000-17)
     //

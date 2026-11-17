@@ -345,6 +345,29 @@ type D3ArrayOfBinary = {
     Payloads: byte[][]
 }
 
+// D3 at depth: binary with no attribute in a nested type, in array elements and as dictionary values.
+[<CLIMutable>]
+type D3BinaryNested = {
+    Name: string
+    Sub: D3BinaryNoOmit
+    Items: D3BinaryNoOmit[]
+}
+
+[<CLIMutable>]
+type D3BinaryDictionary = {
+    Name: string
+    Dict: Dictionary<string, byte[]>
+}
+
+// D3 omission at depth: binary with BsonIgnoreIfDefault (D2OmitNullBinary) in a nested type and in array elements.
+// Omission with BsonIgnoreIfNull at the top level reuses TestClassBinaryData.
+[<CLIMutable>]
+type D3OmitNullBinaryNested = {
+    Name: string
+    Sub: D2OmitNullBinary
+    Items: D2OmitNullBinary[]
+}
+
 // ---- D4: "omit when default" switched off ----
 
 [<CLIMutable>]

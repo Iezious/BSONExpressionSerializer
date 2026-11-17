@@ -182,7 +182,15 @@ module ExpressionWriter =
                 
                 match ofType with
                 | t when t = typeof<string> -> Expression.Convert(valueExpr, typeof<BsonString>) :> Expression |> nullCheck  
-                | t when t = typeof<byte[]> -> Expression.New(typeof<BsonBinaryData>.GetConstructor([| typeof<byte[]> |]), valueExpr) 
+                // Null binary guard (US-004.AC-4, AC-5; known defect D3 / DEC-000-15).
+                // This branch used to build BsonBinaryData unguarded, so a null byte array failed the write with
+                // "Value cannot be null. (Parameter 'bytes')" unless "omit when null" / "omit when default" left the
+                // member out, and a null element of a byte-array array or a null dictionary value always failed (no
+                // attribute can omit those). Binary now goes through nullCheck, like text: a null byte array is stored
+                // as an explicit BSON null, which the reader's existing nullSafe guard loads back as null. The omission
+                // attributes are unaffected: their check wraps the add, so an omitted member never reaches this branch.
+                | t when t = typeof<byte[]>
+                     -> Expression.New(typeof<BsonBinaryData>.GetConstructor([| typeof<byte[]> |]), valueExpr) :> Expression |> nullCheck
                 | t when t = typeof<Int32> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
                 | t when t = typeof<Int64> -> Expression.Convert(valueExpr, typeof<BsonValue>)
                 | t when t = typeof<Guid> -> Expression.Convert(valueExpr, typeof<BsonValue>) 
