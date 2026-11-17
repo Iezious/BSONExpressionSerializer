@@ -60,3 +60,4 @@
 | [DEC-001-7](001.known-defects.md#dec-001-7--member-answers-are-cached-in-a-concurrent-map-filled-with-get-or-add) | Member answers are cached in a concurrent map filled with get-or-add | accepted | 001.known-defects | — |
 | [DEC-001-8](001.known-defects.md#dec-001-8--the-optional-value-wrappers-consume-a-stored-null) | The optional-value wrappers consume a stored null | accepted | 001.known-defects | — |
 | [DEC-001-9](001.known-defects.md#dec-001-9--the-build-workflow-runs-on-pushes-to-master) | The build workflow runs on pushes to `master` | accepted | 001.known-defects | — |
+| [DEC-001-10](001.known-defects.md#dec-001-10--every-workflow-installs-the-net-10-sdk-before-building) | Every workflow installs the .NET 10 SDK before building | accepted | 001.known-defects | — |

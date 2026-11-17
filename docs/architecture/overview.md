@@ -85,6 +85,7 @@ Pairing contract: the shared Models records (option fields, enums stored as stri
 - One NuGet package, `Iezious.Libs.BSONExpressionSerializer`. The package id equals the assembly name.
 - It is released on a version tag, after build and test. The version comes from the tag; none is stored in the repo.
 - A build-and-test workflow runs on pushes to `master` (see `../decisions/001.known-defects.md` DEC-001-9). No workflow runs on pull requests.
+- Every workflow installs the SDK of the runtime generation the library targets before it builds, rather than relying on the build machine's preinstalled SDK (DEC-001-10).
 - A pre-release workflow exists but is unused, and no pre-release has been published (see `../decisions/000.legacy.md` DEC-000-46).
 - It is published to the package feed of the maintainer's personal account (`iezious`), not the SIN organisation feed. Consumers must therefore list both feeds to restore (`.github/workflows/release.yml:22`).
 - It is not deployed, and nothing about it lives under `SinSystems.Deployments/`.
