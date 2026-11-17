@@ -222,3 +222,109 @@ type TestClassWithStaticProperty = {
     Name: string
     Count: int32
 } with static member Projection = {| One=true; Second = true |}    
+
+// ===== Fixture types for KnownDefectTests.fs — one group per defect (D1–D8) =====
+
+// ---- D1: two members mapped to one stored name ----
+
+[<CLIMutable>]
+type D1TwoMembersOneStoredName = {
+    [<BsonElement("x")>]
+    A: string
+    [<BsonElement("x")>]
+    B: string
+}
+
+[<CLIMutable>]
+type D1StoredNameClashesWithPropertyName = {
+    Name: string
+    [<BsonElement("Name")>]
+    Other: string
+}
+
+// ---- D2: null text at any depth (reuses TestFlatClass, TestClassWithSubObject,
+//      TestFlatClassWithArrayOfStringValues, TestClassWithStringDictionary) ----
+
+// ---- D3: null binary with no omit choice ----
+
+[<CLIMutable>]
+type D3BinaryNoOmit = {
+    Name: string
+    Payload: byte[]
+}
+
+[<CLIMutable>]
+type D3ArrayOfBinary = {
+    Name: string
+    Payloads: byte[][]
+}
+
+// ---- D4: "omit when default" switched off ----
+
+[<CLIMutable>]
+type D4IgnoreDefaultOffInt = {
+    Name: string
+    [<BsonIgnoreIfDefault(false); BsonDefaultValue(0)>]
+    Count: int32
+}
+
+[<CLIMutable>]
+type D4IgnoreDefaultOffString = {
+    [<BsonIgnoreIfDefault(false); BsonDefaultValue("zz")>]
+    Name: string
+    Count: int32
+}
+
+[<CLIMutable>]
+type D4IgnoreNullAndDefaultOff = {
+    [<BsonIgnoreIfNull; BsonIgnoreIfDefault(false); BsonDefaultValue("zz")>]
+    Name: string
+    Count: int32
+}
+
+// ---- D5: by-name enumeration inside option / nullable / array ----
+
+[<CLIMutable>]
+type D5EnumStringInOption = {
+    Name: string
+    [<BsonRepresentation(BsonType.String)>]
+    EnumOpt: TestEnum option
+}
+
+[<CLIMutable>]
+type D5EnumStringInNullable = {
+    Name: string
+    [<BsonRepresentation(BsonType.String)>]
+    EnumNullable: Nullable<TestEnum>
+}
+
+[<CLIMutable>]
+type D5EnumStringInArray = {
+    Name: string
+    [<BsonRepresentation(BsonType.String)>]
+    Enums: TestEnum[]
+}
+
+// ---- D6: stored names and exclusion in typed filters / updates ----
+
+[<CLIMutable>]
+type D6RenamedAndExcluded = {
+    [<BsonElement("n")>]
+    Name: string
+    Count: int32
+    [<BsonIgnore>]
+    Excluded: string
+}
+
+// ---- D7: concurrent first use of members ----
+
+[<CLIMutable>]
+type D7ManyFields = {
+    F01: string; F02: string; F03: string; F04: string
+    F05: int32;  F06: int32;  F07: int32;  F08: int32
+    F09: int64;  F10: int64;  F11: int64;  F12: int64
+    F13: bool;   F14: bool;   F15: float;  F16: float
+}
+
+// ---- D8: option / value-option member read of an explicit null
+//      (reuses TestFlatClassWithOptionValue, TestFlatClassWithVOptionString) ----
