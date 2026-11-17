@@ -1,7 +1,10 @@
+# Trigger branch (known defect D9 / DEC-000-44): this used to be `main`, a branch the repository does not have, so the
+# build-and-test workflow never ran and the code was built only on a release tag. It now runs on pushes to `master`,
+# the default branch.
 on:
   push:
     branches:
-      - main
+      - master
 jobs:
   build:
     runs-on: ubuntu-latest
