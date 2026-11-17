@@ -246,9 +246,23 @@ module ExpressionWriter =
         let writeIfNotValueNoneCheck (_: PropertyInfo) (valueExr: Expression) : Expression =
             Expression.Property(valueExr, "IsSome")
                             
-        let getChecker(pr: PropertyInfo) =                 
-            let attrd = pr.GetCustomAttribute<BsonIgnoreIfDefaultAttribute>()
-            let attrn = pr.GetCustomAttribute<BsonIgnoreIfNullAttribute>()
+        let getChecker(pr: PropertyInfo) =
+            // Omission on/off argument (US-007.AC-4; known defect D4 / DEC-000-17).
+            // Only the presence of BsonIgnoreIfDefault used to be checked, so BsonIgnoreIfDefault(false) still left
+            // the member out when it was equal to its default. The attribute now counts only when its Value is true;
+            // switched off, the member is treated as if the attribute were absent, so the remaining rules apply
+            // ("omit when null", then the option / value-option kind rule, otherwise always written).
+            let attrd =
+                match pr.GetCustomAttribute<BsonIgnoreIfDefaultAttribute>() with
+                | attr when attr <> null && attr.Value -> attr
+                | _ -> null
+            // BsonIgnoreIfNull had the same defect (found while fixing D4): BsonIgnoreIfNull(false) still left a null
+            // member out. It also counts only when its Value is true; switched off, a null is written as an explicit null
+            // (unless "omit when default" applies), exactly as if the attribute were absent.
+            let attrn =
+                match pr.GetCustomAttribute<BsonIgnoreIfNullAttribute>() with
+                | attr when attr <> null && attr.Value -> attr
+                | _ -> null
             let t = pr.PropertyType
             
             if(attrn <> null && attrd <> null)

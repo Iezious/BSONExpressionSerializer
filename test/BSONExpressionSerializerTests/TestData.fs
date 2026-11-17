@@ -391,6 +391,102 @@ type D4IgnoreNullAndDefaultOff = {
     Count: int32
 }
 
+// D4 switched off with no declared default: the default of a reference member is null.
+[<CLIMutable>]
+type D4IgnoreDefaultOffNullText = {
+    Name: string
+    [<BsonIgnoreIfDefault(false)>]
+    Value: string
+}
+
+// D4 switched explicitly ON: must keep omitting (regression guard for the fix).
+[<CLIMutable>]
+type D4IgnoreDefaultOnInt = {
+    Name: string
+    [<BsonIgnoreIfDefault(true); BsonDefaultValue(0)>]
+    Count: int32
+}
+
+// D4 switched off on an option: behaves as if the attribute were absent, so the option's own rule applies.
+[<CLIMutable>]
+type D4IgnoreDefaultOffOption = {
+    Name: string
+    [<BsonIgnoreIfDefault(false)>]
+    Value: string option
+}
+
+// D4 switched off at depth: in a nested type and in array elements.
+[<CLIMutable>]
+type D4IgnoreDefaultOffNested = {
+    Name: string
+    Sub: D4IgnoreDefaultOffInt
+    Items: D4IgnoreDefaultOffInt[]
+}
+
+// D4 (BsonIgnoreIfNull): "omit when null" switched off — same defect as BsonIgnoreIfDefault(false):
+// only the presence of the attribute was checked, never its on/off argument.
+
+[<CLIMutable>]
+type D4IgnoreNullOffText = {
+    Name: string
+    [<BsonIgnoreIfNull(false)>]
+    Value: string
+}
+
+[<CLIMutable>]
+type D4IgnoreNullOffSubObject = {
+    Name: string
+    [<BsonIgnoreIfNull(false)>]
+    Value: TestFlatClass
+}
+
+[<CLIMutable>]
+type D4IgnoreNullOffBinary = {
+    Name: string
+    [<BsonIgnoreIfNull(false)>]
+    Value: byte[]
+}
+
+// Switched explicitly ON: must keep omitting (regression guard for the fix).
+[<CLIMutable>]
+type D4IgnoreNullOnText = {
+    Name: string
+    [<BsonIgnoreIfNull(true)>]
+    Value: string
+}
+
+// "omit when null" off, "omit when default" on with a declared default: only the default rule applies.
+[<CLIMutable>]
+type D4IgnoreNullOffDefaultOn = {
+    Name: string
+    [<BsonIgnoreIfNull(false); BsonIgnoreIfDefault; BsonDefaultValue("zz")>]
+    Value: string
+}
+
+// Both switched off: behaves as if neither attribute were present (always written).
+[<CLIMutable>]
+type D4IgnoreNullOffDefaultOff = {
+    Name: string
+    [<BsonIgnoreIfNull(false); BsonIgnoreIfDefault(false); BsonDefaultValue("zz")>]
+    Value: string
+}
+
+// Switched off on an option: the option's own rule applies (None left out).
+[<CLIMutable>]
+type D4IgnoreNullOffOption = {
+    Name: string
+    [<BsonIgnoreIfNull(false)>]
+    Value: string option
+}
+
+// Switched off at depth: in a nested type and in array elements.
+[<CLIMutable>]
+type D4IgnoreNullOffNested = {
+    Name: string
+    Sub: D4IgnoreNullOffText
+    Items: D4IgnoreNullOffText[]
+}
+
 // ---- D5: by-name enumeration inside option / nullable / array ----
 
 [<CLIMutable>]

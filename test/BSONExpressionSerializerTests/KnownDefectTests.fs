@@ -345,6 +345,154 @@ module KnownDefectTests =
         Assert.That(doc.Contains "Name", Is.True)
         Assert.That(doc["Name"].AsString, Is.EqualTo "zz")
 
+    [<Test>]
+    let ``D4 omit-when-default switched off writes a value at its default and it reads back``() =
+        let doc, back = roundTrip { D4IgnoreDefaultOffInt.Name = "a"; Count = 0 }
+        Assert.That(doc.Contains "Count", Is.True, $"written: {doc}")
+        Assert.That(back.Count, Is.EqualTo 0)
+
+    [<Test>]
+    let ``D4 omit-when-default switched off writes null text with no declared default as an explicit null``() =
+        let doc, back = roundTrip { D4IgnoreDefaultOffNullText.Name = "a"; Value = null }
+        Assert.That(doc.Contains "Value", Is.True, $"written: {doc}")
+        Assert.That(doc["Value"].IsBsonNull, Is.True)
+        Assert.That(back.Value, Is.Null)
+
+    [<Test>]
+    let ``D4 omit-when-default switched off writes at its default in a nested type and in array elements``() =
+        let value = {
+            D4IgnoreDefaultOffNested.Name = "a"
+            Sub = { D4IgnoreDefaultOffInt.Name = "s"; Count = 0 }
+            Items = [| { D4IgnoreDefaultOffInt.Name = "i"; Count = 0 } |]
+        }
+        let doc = ExpressionWriter.CreateWriter<D4IgnoreDefaultOffNested>().Invoke(value)
+        Assert.That(doc["Sub"].AsBsonDocument.Contains "Count", Is.True, $"written: {doc}")
+        Assert.That(doc["Items"].AsBsonArray[0].AsBsonDocument.Contains "Count", Is.True, $"written: {doc}")
+
+    // ---------------------------------------------------------------------
+    // D4 (extension) — behaviour that must hold before and after the fix.
+    // ---------------------------------------------------------------------
+
+    [<Test>]
+    let ``D4 omit-when-default switched off writes a value that is not the default``() =
+        let doc = ExpressionWriter.CreateWriter<D4IgnoreDefaultOffInt>().Invoke({ D4IgnoreDefaultOffInt.Name = "a"; Count = 5 })
+        Assert.That(doc["Count"].AsInt32, Is.EqualTo 5)
+
+    [<Test>]
+    let ``D4 omit-when-default switched off with omit-when-null still leaves out a null``() =
+        let doc, back = roundTrip { D4IgnoreNullAndDefaultOff.Name = null; Count = 1 }
+        Assert.That(doc.Contains "Name", Is.False, $"written: {doc}")
+        Assert.That(back.Name, Is.EqualTo "zz", "absent field loads the declared default")
+
+    [<Test>]
+    let ``D4 omit-when-default switched on explicitly still leaves out a value at its default``() =
+        let doc, back = roundTrip { D4IgnoreDefaultOnInt.Name = "a"; Count = 0 }
+        Assert.That(doc.Contains "Count", Is.False, $"written: {doc}")
+        Assert.That(back.Count, Is.EqualTo 0)
+
+    [<Test>]
+    let ``D4 omit-when-default switched off on an option follows the option's own rule``() =
+        let docNone, backNone = roundTrip { D4IgnoreDefaultOffOption.Name = "a"; Value = None }
+        let docSome, backSome = roundTrip { D4IgnoreDefaultOffOption.Name = "a"; Value = Some "x" }
+        Assert.That(docNone.Contains "Value", Is.False, $"written: {docNone}")
+        Assert.That(backNone.Value, Is.EqualTo(None: string option))
+        Assert.That(docSome["Value"].AsString, Is.EqualTo "x")
+        Assert.That(backSome.Value, Is.EqualTo(Some "x"))
+
+    [<Test>]
+    let ``D4 absent field with omit-when-default switched off loads the declared default``() =
+        let back = ExpressionReader.CreateReader<D4IgnoreDefaultOffString>().Invoke(BsonDocument([ BsonElement("Count", BsonInt32 1) ]))
+        Assert.That(back.Name, Is.EqualTo "zz")
+
+    // ---------------------------------------------------------------------
+    // D4 (BsonIgnoreIfNull) — "omit when null" switched off.
+    // Not in docs/plans/tmp.defects.md; found while fixing D4: BsonIgnoreIfNull(false) had the same defect,
+    // only the presence of the attribute was checked, so a null was still left out.
+    // Intended: switched off, the member behaves as if the attribute were absent (a null is written as null).
+    // ---------------------------------------------------------------------
+
+    [<Test>]
+    let ``D4 omit-when-null switched off writes null text as an explicit null and it reads back``() =
+        let doc, back = roundTrip { D4IgnoreNullOffText.Name = "a"; Value = null }
+        Assert.That(doc.Contains "Value", Is.True, $"written: {doc}")
+        Assert.That(doc["Value"].IsBsonNull, Is.True)
+        Assert.That(back.Value, Is.Null)
+
+    [<Test>]
+    let ``D4 omit-when-null switched off writes a null nested object as an explicit null and it reads back``() =
+        let doc, back = roundTrip { D4IgnoreNullOffSubObject.Name = "a"; Value = Unchecked.defaultof<_> }
+        Assert.That(doc.Contains "Value", Is.True, $"written: {doc}")
+        Assert.That(doc["Value"].IsBsonNull, Is.True)
+        Assert.That(back.Value, Is.Null)
+
+    [<Test>]
+    let ``D4 omit-when-null switched off writes a null binary as an explicit null and it reads back``() =
+        let doc, back = roundTrip { D4IgnoreNullOffBinary.Name = "a"; Value = null }
+        Assert.That(doc.Contains "Value", Is.True, $"written: {doc}")
+        Assert.That(doc["Value"].IsBsonNull, Is.True)
+        Assert.That(back.Value, Is.Null)
+
+    [<Test>]
+    let ``D4 omit-when-null switched off writes null in a nested type and in array elements``() =
+        let value = {
+            D4IgnoreNullOffNested.Name = "a"
+            Sub = { D4IgnoreNullOffText.Name = "s"; Value = null }
+            Items = [| { D4IgnoreNullOffText.Name = "i"; Value = null } |]
+        }
+        let doc = ExpressionWriter.CreateWriter<D4IgnoreNullOffNested>().Invoke(value)
+        Assert.That(doc["Sub"].AsBsonDocument.Contains "Value", Is.True, $"written: {doc}")
+        Assert.That(doc["Items"].AsBsonArray[0].AsBsonDocument.Contains "Value", Is.True, $"written: {doc}")
+
+    [<Test>]
+    let ``D4 omit-when-null switched off with omit-when-default on writes a null that is not the declared default``() =
+        let doc, back = roundTrip { D4IgnoreNullOffDefaultOn.Name = "a"; Value = null }
+        Assert.That(doc.Contains "Value", Is.True, $"written: {doc}")
+        Assert.That(doc["Value"].IsBsonNull, Is.True)
+        Assert.That(back.Value, Is.Null)
+
+    [<Test>]
+    let ``D4 omit-when-null and omit-when-default both switched off write null and the default``() =
+        let docNull = ExpressionWriter.CreateWriter<D4IgnoreNullOffDefaultOff>().Invoke({ D4IgnoreNullOffDefaultOff.Name = "a"; Value = null })
+        let docDefault = ExpressionWriter.CreateWriter<D4IgnoreNullOffDefaultOff>().Invoke({ D4IgnoreNullOffDefaultOff.Name = "a"; Value = "zz" })
+        Assert.That(docNull.Contains "Value", Is.True, $"written: {docNull}")
+        Assert.That(docNull["Value"].IsBsonNull, Is.True)
+        Assert.That(docDefault.Contains "Value", Is.True, $"written: {docDefault}")
+        Assert.That(docDefault["Value"].AsString, Is.EqualTo "zz")
+
+    // Must hold before and after the fix.
+
+    [<Test>]
+    let ``D4 omit-when-null switched off writes a value``() =
+        let doc, back = roundTrip { D4IgnoreNullOffText.Name = "a"; Value = "x" }
+        Assert.That(doc["Value"].AsString, Is.EqualTo "x")
+        Assert.That(back.Value, Is.EqualTo "x")
+
+    [<Test>]
+    let ``D4 omit-when-null switched on explicitly still leaves out a null``() =
+        let doc, back = roundTrip { D4IgnoreNullOnText.Name = "a"; Value = null }
+        Assert.That(doc.Contains "Value", Is.False, $"written: {doc}")
+        Assert.That(back.Value, Is.Null)
+
+    [<Test>]
+    let ``D4 omit-when-null switched off with omit-when-default on still leaves out the declared default``() =
+        let doc, back = roundTrip { D4IgnoreNullOffDefaultOn.Name = "a"; Value = "zz" }
+        Assert.That(doc.Contains "Value", Is.False, $"written: {doc}")
+        Assert.That(back.Value, Is.EqualTo "zz", "absent field loads the declared default")
+
+    [<Test>]
+    let ``D4 omit-when-null switched off on an option follows the option's own rule``() =
+        let docNone, backNone = roundTrip { D4IgnoreNullOffOption.Name = "a"; Value = None }
+        let docSome, backSome = roundTrip { D4IgnoreNullOffOption.Name = "a"; Value = Some "x" }
+        Assert.That(docNone.Contains "Value", Is.False, $"written: {docNone}")
+        Assert.That(backNone.Value, Is.EqualTo(None: string option))
+        Assert.That(docSome["Value"].AsString, Is.EqualTo "x")
+        Assert.That(backSome.Value, Is.EqualTo(Some "x"))
+
+    [<Test>]
+    let ``D4 absent field with omit-when-null switched off loads as null``() =
+        let back = ExpressionReader.CreateReader<D4IgnoreNullOffText>().Invoke(onlyName "a")
+        Assert.That(back.Value, Is.Null)
+
     // =====================================================================
     // D5. A by-name enumeration inside an option, nullable or list filters and updates as a number (DEC-000-29)
     //
@@ -375,7 +523,7 @@ module KnownDefectTests =
 
     [<Test>]
     let ``D5 update of by-name enum in an option stores the name and the document loads``() =
-        let u = Render.Set<D5EnumStringInOption, TestEnum option>((fun f -> f.EnumOpt), Some TestEnum.OptionC)
+        let u = Render.Set<D5EnumStringInOption, TestEnum option>(_.EnumOpt, Some TestEnum.OptionC)
         let stored = u["$set"]["EnumOpt"]
         Assert.That(stored.BsonType, Is.EqualTo BsonType.String)
         let doc = BsonDocument([ BsonElement("Name", BsonString "a"); BsonElement("EnumOpt", stored) ])
@@ -384,7 +532,7 @@ module KnownDefectTests =
 
     [<Test>]
     let ``D5 update of by-name enum in a nullable stores the name and the document loads``() =
-        let u = Render.Set<D5EnumStringInNullable, Nullable<TestEnum>>((fun f -> f.EnumNullable), Nullable TestEnum.OptionC)
+        let u = Render.Set<D5EnumStringInNullable, Nullable<TestEnum>>(_.EnumNullable, Nullable TestEnum.OptionC)
         let stored = u["$set"]["EnumNullable"]
         Assert.That(stored.BsonType, Is.EqualTo BsonType.String)
         let doc = BsonDocument([ BsonElement("Name", BsonString "a"); BsonElement("EnumNullable", stored) ])
@@ -393,7 +541,7 @@ module KnownDefectTests =
 
     [<Test>]
     let ``D5 update of by-name enum array stores names and the document loads``() =
-        let u = Render.Set<D5EnumStringInArray, TestEnum[]>((fun f -> f.Enums), [| TestEnum.OptionA; TestEnum.OptionC |])
+        let u = Render.Set<D5EnumStringInArray, TestEnum[]>(_.Enums, [| TestEnum.OptionA; TestEnum.OptionC |])
         let stored = u["$set"]["Enums"]
         Assert.That(stored.AsBsonArray[0].BsonType, Is.EqualTo BsonType.String)
         let doc = BsonDocument([ BsonElement("Name", BsonString "a"); BsonElement("Enums", stored) ])
