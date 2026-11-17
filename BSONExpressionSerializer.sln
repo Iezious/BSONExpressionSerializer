@@ -4,30 +4,6 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Iezious.Libs.BSONExpression
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BSONExpressionSerializerTests", "test\BSONExpressionSerializerTests\BSONExpressionSerializerTests.fsproj", "{18FFC2AE-BCD9-4081-8D80-838DA3AA5740}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{1EC178DB-EEA5-4AF3-B6C7-C33F86546683}"
-	ProjectSection(SolutionItems) = preProject
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "product", "product", "{A08601B3-562D-4CB6-A840-4EC8ED95F4FA}"
-	ProjectSection(SolutionItems) = preProject
-		docs\product\features.md = docs\product\features.md
-		docs\product\glossary.md = docs\product\glossary.md
-		docs\product\use-cases.md = docs\product\use-cases.md
-		docs\product\stories.md = docs\product\stories.md
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "architecture", "architecture", "{A9747111-E45A-4C2A-8B8A-D492FD1CA6FC}"
-	ProjectSection(SolutionItems) = preProject
-		docs\architecture\overview.md = docs\architecture\overview.md
-		docs\architecture\interfaces.md = docs\architecture\interfaces.md
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "decisions", "decisions", "{066926E6-9848-4E97-BA23-B1C6C2CEC740}"
-	ProjectSection(SolutionItems) = preProject
-		docs\decisions\000.legacy.md = docs\decisions\000.legacy.md
-		docs\decisions\index.md = docs\decisions\index.md
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,8 +20,5 @@ Global
 		{18FFC2AE-BCD9-4081-8D80-838DA3AA5740}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{A08601B3-562D-4CB6-A840-4EC8ED95F4FA} = {1EC178DB-EEA5-4AF3-B6C7-C33F86546683}
-		{A9747111-E45A-4C2A-8B8A-D492FD1CA6FC} = {1EC178DB-EEA5-4AF3-B6C7-C33F86546683}
-		{066926E6-9848-4E97-BA23-B1C6C2CEC740} = {1EC178DB-EEA5-4AF3-B6C7-C33F86546683}
 	EndGlobalSection
 EndGlobal
