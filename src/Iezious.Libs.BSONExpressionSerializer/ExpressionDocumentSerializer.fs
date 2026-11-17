@@ -27,6 +27,26 @@ type ExpressionDocumentSerializer<'t>() =
         BsonDocumentSerializer.Instance.Serialize<BsonDocument>(context, doc)
 
     
+    // Declared enumeration form inside wrappers (US-009.AC-7, US-010.AC-5; known defect D5 / DEC-000-29).
+    // The whole-document writer stores an enumeration in the member's BsonRepresentation form at any wrapper level
+    // (option, value option, nullable, array element), or as a 32-bit number when none is declared. Typed filters and
+    // updates used to take the inner serializer from the registry, which knows nothing about the member's attribute,
+    // so a wrapped enumeration was always translated as a 32-bit number: a by-name filter never matched and an update
+    // stored a number the reader then refused. innerSerializer now builds the enumeration serializer from the member's
+    // declared form whenever the wrapped type is an enumeration, so translation uses the same form as storage.
+    let enumRepresentation (_member: PropertyInfo) =
+        match _member.GetCustomAttributes(typeof<BsonRepresentationAttribute>, false) with
+        | attrs when attrs <> null && attrs.Length > 0 -> (attrs[0] :?> BsonRepresentationAttribute).Representation
+        | _ -> BsonType.Int32
+
+    let enumSerializer (enumType: Type) (representation: BsonType) =
+        let serializerType = typedefof<EnumSerializer<BsonType>>.MakeGenericType(enumType)
+        Activator.CreateInstance(serializerType, representation) :?> IBsonSerializer
+
+    let innerSerializer (_member: PropertyInfo) (innerType: Type) : IBsonSerializer =
+        if innerType.IsEnum then enumSerializer innerType (enumRepresentation _member)
+        else BsonSerializer.LookupSerializer(innerType)
+
     let resolveTypeSerializer (_member:PropertyInfo) =
         match _member.PropertyType with
         | pt when pt.IsEnum ->
@@ -48,7 +68,7 @@ type ExpressionDocumentSerializer<'t>() =
         
         | _pt when _pt.IsGenericType && _pt.GetGenericTypeDefinition() = typeof<Nullable<_>>.GetGenericTypeDefinition() ->
             let underType = _pt.GetGenericArguments().[0]
-            let valueSerializer = BsonSerializer.LookupSerializer(underType)
+            let valueSerializer = innerSerializer _member underType
             
             if (valueSerializer <> null) then
                 let serializerType = typedefof<NullableSerializer<_>>.MakeGenericType(underType)
@@ -60,7 +80,7 @@ type ExpressionDocumentSerializer<'t>() =
                 
         | _pt when _pt.IsGenericType && _pt.GetGenericTypeDefinition() = typeof<ValueOption<_>>.GetGenericTypeDefinition() ->
             let underType = _pt.GetGenericArguments().[0]
-            let valueSerializer = BsonSerializer.LookupSerializer(underType)
+            let valueSerializer = innerSerializer _member underType
             
             if (valueSerializer <> null) then
                 let serializerType = typedefof<ValueOptionSerializer<_>>.MakeGenericType(underType)
@@ -72,7 +92,7 @@ type ExpressionDocumentSerializer<'t>() =
                                 
         | _pt when _pt.IsGenericType && _pt.GetGenericTypeDefinition() = typeof<Option<_>>.GetGenericTypeDefinition() ->
             let underType = _pt.GetGenericArguments().[0]
-            let valueSerializer = BsonSerializer.LookupSerializer(underType)
+            let valueSerializer = innerSerializer _member underType
             
             if (valueSerializer <> null) then
                 let serializerType = typedefof<OptionSerializer<_>>.MakeGenericType(underType)
@@ -82,6 +102,15 @@ type ExpressionDocumentSerializer<'t>() =
             else
                 false, null
                     
+        // Array of enumerations (D5): the registry's array serializer would translate each element as a 32-bit number;
+        // build it around an element serializer in the member's declared form instead.
+        | _pt when _pt.IsArray && _pt.GetElementType().IsEnum ->
+            let elementType = _pt.GetElementType()
+            let serializerType = typedefof<ArraySerializer<_>>.MakeGenericType(elementType)
+            let serializer = Activator.CreateInstance(serializerType, innerSerializer _member elementType) :?> IBsonSerializer
+            propMap.Add(_member.Name, serializer)
+            true, BsonSerializationInfo(_member.Name, serializer, _member.PropertyType)
+
         | _pt ->
             let serializer = BsonSerializer.LookupSerializer(_member.PropertyType)
             if (serializer <> null) then

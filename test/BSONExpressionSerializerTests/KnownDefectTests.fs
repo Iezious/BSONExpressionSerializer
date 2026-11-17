@@ -548,6 +548,91 @@ module KnownDefectTests =
         let back = ExpressionReader.CreateReader<D5EnumStringInArray>().Invoke(doc)
         Assert.That(back.Enums, Is.EqualTo(box [| TestEnum.OptionA; TestEnum.OptionC |]))
 
+    [<Test>]
+    let ``D5 filter on by-name enum in a value option matches by name``() =
+        let b = Render.Filter<TestClassWithEnumStringOption>(fun f -> f.EnumData = ValueSome TestEnum.OptionB)
+        Assert.That(b["EnumData"].BsonType, Is.EqualTo BsonType.String, $"rendered: {b}")
+        Assert.That(b["EnumData"].AsString, Is.EqualTo(nameof TestEnum.OptionB))
+
+    [<Test>]
+    let ``D5 update of by-name enum in a value option stores the name and the document loads``() =
+        let u = Render.Set<TestClassWithEnumStringOption, TestEnum voption>(_.EnumData, ValueSome TestEnum.OptionC)
+        let stored = u["$set"]["EnumData"]
+        Assert.That(stored.BsonType, Is.EqualTo BsonType.String, $"rendered: {u}")
+        let doc = BsonDocument([ BsonElement("Name", BsonString "a"); BsonElement("Count", BsonInt64 1L); BsonElement("EnumData", stored) ])
+        let back = ExpressionReader.CreateReader<TestClassWithEnumStringOption>().Invoke(doc)
+        Assert.That(back.EnumData, Is.EqualTo(ValueSome TestEnum.OptionC))
+
+    // ---------------------------------------------------------------------
+    // D5 (extension) — a typed update stores the same form as storing the whole value (US-010 story),
+    // for every declared form, not only by-name.
+    // ---------------------------------------------------------------------
+
+    [<Test>]
+    let ``D5 update of by-name enum in an option stores the same value as a whole-document write``() =
+        let written = ExpressionWriter.CreateWriter<D5EnumStringInOption>().Invoke({ D5EnumStringInOption.Name = "a"; EnumOpt = Some TestEnum.OptionC })
+        let u = Render.Set<D5EnumStringInOption, TestEnum option>(_.EnumOpt, Some TestEnum.OptionC)
+        Assert.That(u["$set"]["EnumOpt"], Is.EqualTo written["EnumOpt"])
+
+    [<Test>]
+    let ``D5 update of by-name enum in a nullable stores the same value as a whole-document write``() =
+        let written = ExpressionWriter.CreateWriter<D5EnumStringInNullable>().Invoke({ D5EnumStringInNullable.Name = "a"; EnumNullable = Nullable TestEnum.OptionC })
+        let u = Render.Set<D5EnumStringInNullable, Nullable<TestEnum>>(_.EnumNullable, Nullable TestEnum.OptionC)
+        Assert.That(u["$set"]["EnumNullable"], Is.EqualTo written["EnumNullable"])
+
+    [<Test>]
+    let ``D5 update of by-name enum array stores the same value as a whole-document write``() =
+        let values = [| TestEnum.OptionA; TestEnum.OptionC |]
+        let written = ExpressionWriter.CreateWriter<D5EnumStringInArray>().Invoke({ D5EnumStringInArray.Name = "a"; Enums = values })
+        let u = Render.Set<D5EnumStringInArray, TestEnum[]>(_.Enums, values)
+        Assert.That(u["$set"]["Enums"], Is.EqualTo written["Enums"])
+
+    [<Test>]
+    let ``D5 filter on 64-bit enum in an option matches by the declared form``() =
+        let b = Render.Filter<D5EnumInt64InOption>(fun f -> f.EnumOpt = Some TestEnum.OptionB)
+        Assert.That(b["EnumOpt"].BsonType, Is.EqualTo BsonType.Int64, $"rendered: {b}")
+        Assert.That(b["EnumOpt"].AsInt64, Is.EqualTo(int64 TestEnum.OptionB))
+
+    [<Test>]
+    let ``D5 update of 64-bit enum array stores the same value as a whole-document write and loads``() =
+        let values = [| TestEnum.OptionA; TestEnum.OptionC |]
+        let written = ExpressionWriter.CreateWriter<D5EnumInt64InArray>().Invoke({ D5EnumInt64InArray.Name = "a"; Enums = values })
+        let u = Render.Set<D5EnumInt64InArray, TestEnum[]>(_.Enums, values)
+        let stored = u["$set"]["Enums"]
+        Assert.That(stored, Is.EqualTo written["Enums"])
+        let back = ExpressionReader.CreateReader<D5EnumInt64InArray>().Invoke(BsonDocument([ BsonElement("Name", BsonString "a"); BsonElement("Enums", stored) ]))
+        Assert.That(back.Enums, Is.EqualTo(box values))
+
+    // Must hold before and after the fix.
+
+    [<Test>]
+    let ``D5 filter on enum with no declared form in an option or array matches as a 32-bit number``() =
+        let bOpt = Render.Filter<D5EnumNoFormInOption>(fun f -> f.EnumOpt = Some TestEnum.OptionB)
+        let bArr = Render.Filter<D5EnumNoFormInArray>(fun f -> Enumerable.Contains(f.Enums, TestEnum.OptionB))
+        Assert.That(bOpt["EnumOpt"].BsonType, Is.EqualTo BsonType.Int32, $"rendered: {bOpt}")
+        Assert.That(bOpt["EnumOpt"].AsInt32, Is.EqualTo(int TestEnum.OptionB))
+        Assert.That(bArr["Enums"].BsonType, Is.EqualTo BsonType.Int32, $"rendered: {bArr}")
+        Assert.That(bArr["Enums"].AsInt32, Is.EqualTo(int TestEnum.OptionB))
+
+    [<Test>]
+    let ``D5 update of enum with no declared form in an option stores the same value as a whole-document write``() =
+        let written = ExpressionWriter.CreateWriter<D5EnumNoFormInOption>().Invoke({ D5EnumNoFormInOption.Name = "a"; EnumOpt = Some TestEnum.OptionC })
+        let u = Render.Set<D5EnumNoFormInOption, TestEnum option>(_.EnumOpt, Some TestEnum.OptionC)
+        Assert.That(u["$set"]["EnumOpt"], Is.EqualTo written["EnumOpt"])
+
+    [<Test>]
+    let ``D5 filter for an empty by-name enum option matches null``() =
+        let b = Render.Filter<D5EnumStringInOption>(fun f -> f.EnumOpt = None)
+        Assert.That(b["EnumOpt"].IsBsonNull, Is.True, $"rendered: {b}")
+
+    [<Test>]
+    let ``D5 update that empties a by-name enum option stores null and the document loads empty``() =
+        let u = Render.Set<D5EnumStringInOption, TestEnum option>(_.EnumOpt, None)
+        let stored = u["$set"]["EnumOpt"]
+        Assert.That(stored.IsBsonNull, Is.True, $"rendered: {u}")
+        let back = ExpressionReader.CreateReader<D5EnumStringInOption>().Invoke(BsonDocument([ BsonElement("Name", BsonString "a"); BsonElement("EnumOpt", stored) ]))
+        Assert.That(back.EnumOpt, Is.EqualTo(None: TestEnum option))
+
     // =====================================================================
     // D6. Typed filters and updates ignore stored names and exclusion (DEC-000-30)
     //

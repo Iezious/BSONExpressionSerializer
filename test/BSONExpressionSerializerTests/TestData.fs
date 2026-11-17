@@ -510,6 +510,36 @@ type D5EnumStringInArray = {
     Enums: TestEnum[]
 }
 
+// D5 by-name in a value option reuses TestClassWithEnumStringOption (EnumData: TestEnum voption, String).
+
+// D5 with a 64-bit number form: the declared form must be used inside wrappers too, not only the by-name form.
+[<CLIMutable>]
+type D5EnumInt64InOption = {
+    Name: string
+    [<BsonRepresentation(BsonType.Int64)>]
+    EnumOpt: TestEnum option
+}
+
+[<CLIMutable>]
+type D5EnumInt64InArray = {
+    Name: string
+    [<BsonRepresentation(BsonType.Int64)>]
+    Enums: TestEnum[]
+}
+
+// D5 with no declared form: stays a 32-bit number inside wrappers (regression guard).
+[<CLIMutable>]
+type D5EnumNoFormInOption = {
+    Name: string
+    EnumOpt: TestEnum option
+}
+
+[<CLIMutable>]
+type D5EnumNoFormInArray = {
+    Name: string
+    Enums: TestEnum[]
+}
+
 // ---- D6: stored names and exclusion in typed filters / updates ----
 
 [<CLIMutable>]
