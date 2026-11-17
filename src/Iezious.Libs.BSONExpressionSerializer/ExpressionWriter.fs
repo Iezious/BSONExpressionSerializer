@@ -255,12 +255,37 @@ module ExpressionWriter =
                 then Some writeIfNotValueNoneCheck
             else None
         
+        let storedProps =
+            objType.GetProperties(BindingFlags.Instance + BindingFlags.Public)
+            |> Array.filter (fun p -> p.GetCustomAttribute<BsonIgnoreAttribute>() = null)
+
+        // Duplicate stored-name guard (US-005.AC-3; known defect D1 / DEC-000-3).
+        // Every member that is not [<BsonIgnore>] is stored under getNameInBson: its BsonElement name, or the property name.
+        // Two members resolving to one stored name (two equal BsonElement names, or a BsonElement name equal to another
+        // property's name) used to pass creation, and then every whole-document write of the type failed with
+        // "Duplicate element name" from BsonDocument.Add. The type is now refused here, while the writer is being built.
+        // build runs eagerly for the root type and recursively for nested types, array elements and dictionary values,
+        // and ExpressionDocumentSerializer<'T> builds its writer in its constructor, so a clash at any depth fails
+        // registration at service start instead of the first store. The message names the type, the stored name and
+        // the clashing members. The reader keeps no such guard: reading one field into two members does not fail.
+        let duplicates =
+            storedProps
+            |> Array.groupBy getNameInBson
+            |> Array.filter (fun (_, ps) -> ps.Length > 1)
+            |> Array.map (fun (name, ps) ->
+                let members = ps |> Array.map (fun p -> p.Name) |> String.concat ", "
+                $"'{name}' <- {members}")
+
+        if duplicates.Length > 0 then
+            let details = String.concat "; " duplicates
+            invalidOp $"Type '{objType.FullName}' maps more than one member to the same stored name: {details}"
+
         let addMethod = typeof<BsonDocument>.GetMethod("Add", [| typeof<string>; typeof<BsonValue> |])
         let _v_res = Expression.Variable(typeof<BsonDocument>, "result")
         let steps = List<Expression>()
         steps.Add(Expression.Assign(_v_res, Expression.New(typeof<BsonDocument>)))
 
-        for pr in (objType.GetProperties(BindingFlags.Instance + BindingFlags.Public) |> Seq.where(fun p -> p.GetCustomAttribute<BsonIgnoreAttribute>() = null)) do
+        for pr in storedProps do
             let name = getNameInBson pr |> Expression.Constant
             let value = Expression.Property(inst, pr)
             let valExpr = buildValue pr value
