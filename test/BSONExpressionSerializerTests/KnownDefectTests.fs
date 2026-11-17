@@ -48,6 +48,13 @@ type private Render =
             .Set(field, value)
             .Render(RenderArgs<'t>(serializer, BsonSerializer.SerializerRegistry))
 
+    /// Renders a projection to one member and returns the serializer the store reads each returned document with.
+    static member Project<'t, 'p>(projection: Expression<Func<'t, 'p>>) : IBsonSerializer<'p> =
+        ProjectionDefinitionBuilder<'t>()
+            .Expression(projection)
+            .Render(RenderArgs<'t>(ExpressionDocumentSerializer<'t>(), BsonSerializer.SerializerRegistry))
+            .ProjectionSerializer
+
     static member SortAscending<'t>(field: Expression<Func<'t, obj>>) : BsonDocument =
         SortDefinitionBuilder<'t>()
             .Ascending(field)
@@ -955,3 +962,107 @@ module KnownDefectTests =
         reader.ReadName("Next")
         Assert.That(value, Is.EqualTo(ValueNone: string voption))
         Assert.That(reader.ReadInt32(), Is.EqualTo 7)
+
+    // ---------------------------------------------------------------------
+    // D8 (extension) — the paths the store reads single members through, and what must hold before and after the fix.
+    // ---------------------------------------------------------------------
+
+    /// Reads one stored value through a member serializer, then keeps reading the same reader (as the store does).
+    let private readValueThenNext (serializer: IBsonSerializer) (stored: BsonValue) : obj * int =
+        let doc = BsonDocument([ BsonElement("a", stored); BsonElement("Next", BsonInt32 7) ])
+        use reader = new BsonDocumentReader(doc)
+        reader.ReadStartDocument()
+        reader.ReadName("a")
+        let value = serializer.Deserialize(BsonDeserializationContext.CreateRoot(reader), BsonDeserializationArgs())
+        reader.ReadName("Next")
+        value, reader.ReadInt32()
+
+    [<Test>]
+    let ``D8 explicit null as the last element leaves the reader able to close the document``() =
+        let ser = memberSerializer<TestFlatClassWithOptionValue> "OptString"
+        use reader = new BsonDocumentReader(BsonDocument([ BsonElement("OptString", BsonNull.Value) ]))
+        reader.ReadStartDocument()
+        reader.ReadName("OptString")
+        let value = ser.Deserialize(BsonDeserializationContext.CreateRoot(reader), BsonDeserializationArgs())
+        reader.ReadEndDocument()
+        Assert.That((value :?> string option), Is.EqualTo(None: string option))
+
+    [<Test>]
+    let ``D8 distinct-style read of option values with explicit nulls succeeds``() =
+        // Distinct returns the values as an array, read element by element with the member serializer (US-004.AC-9).
+        let item = memberSerializer<TestFlatClassWithOptionValue> "OptString" :?> IBsonSerializer<string option>
+        let arraySer = Serializers.ArraySerializer<string option>(item) :> IBsonSerializer<string option[]>
+        let doc = BsonDocument([ BsonElement("values", BsonArray([ BsonNull.Value :> BsonValue; BsonString "a"; BsonNull.Value ])) ])
+        use reader = new BsonDocumentReader(doc)
+        reader.ReadStartDocument()
+        reader.ReadName("values")
+        let values = arraySer.Deserialize(BsonDeserializationContext.CreateRoot(reader), BsonDeserializationArgs())
+        reader.ReadEndDocument()
+        Assert.That(values, Is.EqualTo(box [| None; Some "a"; None |]))
+
+    [<Test>]
+    let ``D8 projection of a single option member reads an explicit null as empty``() =
+        // A query that reads back only that field (US-004.AC-8). The store returns a single projected value wrapped
+        // as { _v: <value> } and reads it with the member serializer.
+        let projectionSer = Render.Project<TestFlatClassWithOptionValue, string option>(fun x -> x.OptString)
+        use reader = new BsonDocumentReader(BsonDocument([ BsonElement("_v", BsonNull.Value) ]))
+        let value = projectionSer.Deserialize(BsonDeserializationContext.CreateRoot(reader), BsonDeserializationArgs())
+        Assert.That(value, Is.EqualTo(None: string option))
+
+    [<Test>]
+    let ``D8 by-name enum option member read of an explicit null returns empty and leaves the reader usable``() =
+        let value, next = readValueThenNext (memberSerializer<D5EnumStringInOption> "EnumOpt") BsonNull.Value
+        Assert.That((value :?> TestEnum option), Is.EqualTo(None: TestEnum option))
+        Assert.That(next, Is.EqualTo 7)
+
+    [<Test>]
+    let ``D8 exported nullable wrapper read of an explicit null leaves the reader usable``() =
+        // Same defect in the library's own NullableSerializer (found while fixing D8); the member resolver uses the
+        // driver's NullableSerializer instead (DEC-000-29), so only direct users of the exported one were exposed.
+        let ser =
+            Iezious.Libs.BSONExpressionSerializer.NullableSerializer<int32>(Serializers.Int32Serializer())
+            :> IBsonSerializer<Nullable<int32>>
+        let value, next = readValueThenNext ser BsonNull.Value
+        Assert.That(value, Is.Null)
+        Assert.That(next, Is.EqualTo 7)
+
+    // Must hold before and after the fix.
+
+    [<Test>]
+    let ``D8 option member read of a value returns it and leaves the reader usable``() =
+        let value, next = readValueThenNext (memberSerializer<TestFlatClassWithOptionValue> "OptString") (BsonString "x")
+        Assert.That((value :?> string option), Is.EqualTo(Some "x"))
+        Assert.That(next, Is.EqualTo 7)
+
+    [<Test>]
+    let ``D8 value-option member read of a value returns it and leaves the reader usable``() =
+        let value, next = readValueThenNext (memberSerializer<TestFlatClassWithVOptionString> "OptString") (BsonString "x")
+        Assert.That((value :?> string voption), Is.EqualTo(ValueSome "x"))
+        Assert.That(next, Is.EqualTo 7)
+
+    [<Test>]
+    let ``D8 by-name enum option member read of a name returns the value``() =
+        let value, next = readValueThenNext (memberSerializer<D5EnumStringInOption> "EnumOpt") (BsonString "OptionB")
+        Assert.That((value :?> TestEnum option), Is.EqualTo(Some TestEnum.OptionB))
+        Assert.That(next, Is.EqualTo 7)
+
+    [<Test>]
+    let ``D8 nullable member read of an explicit null returns empty and leaves the reader usable``() =
+        let value, next = readValueThenNext (memberSerializer<TestClassWithNullable> "CountNullable") BsonNull.Value
+        Assert.That(value, Is.Null)
+        Assert.That(next, Is.EqualTo 7)
+
+    [<Test>]
+    let ``D8 option and value-option wrappers write an empty value as null``() =
+        let write (ser: IBsonSerializer) (value: obj) =
+            let doc = BsonDocument()
+            use writer = new BsonDocumentWriter(doc)
+            writer.WriteStartDocument()
+            writer.WriteName("a")
+            ser.Serialize(BsonSerializationContext.CreateRoot(writer), BsonSerializationArgs(), value)
+            writer.WriteEndDocument()
+            doc
+        let optDoc = write (memberSerializer<TestFlatClassWithOptionValue> "OptString") (box (None: string option))
+        let voptDoc = write (memberSerializer<TestFlatClassWithVOptionString> "OptString") (box (ValueNone: string voption))
+        Assert.That(optDoc["a"].IsBsonNull, Is.True, $"written: {optDoc}")
+        Assert.That(voptDoc["a"].IsBsonNull, Is.True, $"written: {voptDoc}")
