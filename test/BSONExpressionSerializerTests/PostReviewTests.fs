@@ -1,9 +1,11 @@
 namespace BSONExpressionSerializerTests
 
-// Reproduction tests for docs/plans/tmp.defects.md (D1–D8).
-// Every test asserts the INTENDED behaviour (the cited story / acceptance criterion),
-// so each one is expected to FAIL against the current library code.
-// The defect descriptions are copied verbatim from docs/plans/tmp.defects.md.
+// Post-review tests: regression guards for the defects D1–D9 found in the code review of the library.
+// Every test asserts the INTENDED behaviour (the cited story / acceptance criterion). Each defect test was written to
+// fail against the code as reviewed and passes since its fix; the guards marked "Must hold before and after the fix"
+// held throughout.
+// The defect descriptions are copied verbatim from the review findings. "Today" describes the code as reviewed and
+// the "Where" line numbers point into that version, not the current one.
 // All source paths are under `src/Iezious.Libs.BSONExpressionSerializer/` unless they start with `.github/`.
 //
 // D9 is a CI-configuration defect and has no unit test:
@@ -61,7 +63,7 @@ type private Render =
             .Render(RenderArgs<'t>(ExpressionDocumentSerializer<'t>(), BsonSerializer.SerializerRegistry))
 
 [<TestFixture>]
-module KnownDefectTests =
+module PostReviewTests =
 
     let private roundTrip<'t> (value: 't) : BsonDocument * 't =
         let doc = ExpressionWriter.CreateWriter<'t>().Invoke(value)
@@ -428,7 +430,7 @@ module KnownDefectTests =
 
     // ---------------------------------------------------------------------
     // D4 (BsonIgnoreIfNull) — "omit when null" switched off.
-    // Not in docs/plans/tmp.defects.md; found while fixing D4: BsonIgnoreIfNull(false) had the same defect,
+    // Not in the review findings; found while fixing D4: BsonIgnoreIfNull(false) had the same defect,
     // only the presence of the attribute was checked, so a null was still left out.
     // Intended: switched off, the member behaves as if the attribute were absent (a null is written as null).
     // ---------------------------------------------------------------------

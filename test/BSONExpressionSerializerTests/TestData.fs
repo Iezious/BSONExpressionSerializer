@@ -223,7 +223,7 @@ type TestClassWithStaticProperty = {
     Count: int32
 } with static member Projection = {| One=true; Second = true |}    
 
-// ===== Fixture types for KnownDefectTests.fs — one group per defect (D1–D8) =====
+// ===== Fixture types for PostReviewTests.fs — one group per defect (D1–D8) =====
 
 // ---- D1: two members mapped to one stored name ----
 

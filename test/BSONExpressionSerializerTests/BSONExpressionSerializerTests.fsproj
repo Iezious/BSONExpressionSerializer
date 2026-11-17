@@ -14,7 +14,7 @@
         <Compile Include="WriterBuildTests.fs" />
         <Compile Include="WriterExecutionTests.fs" />
         <Compile Include="MongoExpressionBuilderTests.fs" />
-        <Compile Include="KnownDefectTests.fs" />
+        <Compile Include="PostReviewTests.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
